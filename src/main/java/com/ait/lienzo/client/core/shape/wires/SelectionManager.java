@@ -340,8 +340,7 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
     }
 
     public void rebuildSelectionArea() {
-        if (m_selected.isEmpty())
-        {
+        if (m_selected.isEmpty()) {
             return;
         }
         m_selected.rebuildBoundingBox();

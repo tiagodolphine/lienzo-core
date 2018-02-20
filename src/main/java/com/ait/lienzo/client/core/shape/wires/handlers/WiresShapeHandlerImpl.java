@@ -17,10 +17,7 @@ import com.ait.lienzo.client.widget.DragContext;
  * - Delegate some mouse interactions for a single wires shape to its wires shape control instance
  * - Displays some highlights to provide feedback for containment and docking operations.
  */
-public class WiresShapeHandlerImpl
-        extends WiresManager.WiresDragHandler
-        implements
-        WiresShapeHandler {
+public class WiresShapeHandlerImpl extends WiresManager.WiresDragHandler implements WiresShapeHandler {
 
     private final WiresShapeControl control;
     private final WiresShapeHighlight<PickerPart.ShapePart> highlight;
