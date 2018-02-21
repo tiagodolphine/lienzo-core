@@ -16,6 +16,7 @@
 
 package com.ait.lienzo.client.core.shape.wires;
 
+import com.ait.lienzo.client.core.shape.AbstractDirectionalMultiPointShape;
 import static com.ait.lienzo.client.core.shape.wires.IControlHandle.ControlHandleStandardType.POINT;
 
 import com.ait.lienzo.client.core.shape.Group;
@@ -712,6 +713,7 @@ public class WiresConnector
         }
         return new WiresMagnet[] { headM, tailM };
     }
+
 
     public Point2DArray getControlPoints()
     {

@@ -20,6 +20,7 @@ import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragEndHandler;
 import com.ait.lienzo.client.core.shape.IDirectionalMultiPointShape;
+import com.ait.lienzo.client.core.shape.AbstractDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
 import com.ait.lienzo.client.core.shape.wires.BackingColorMapUtils;
