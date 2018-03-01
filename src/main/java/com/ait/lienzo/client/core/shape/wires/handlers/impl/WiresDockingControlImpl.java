@@ -186,27 +186,24 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         return new Point2D(newX, newY);
     }
 
-    private WiresMagnet getCloserMagnet(WiresShape shape,
-                                        WiresContainer parent) {
+    private WiresMagnet getCloserMagnet(WiresShape shape, WiresContainer parent) {
         final WiresShape parentShape = (WiresShape) parent;
         final MagnetManager.Magnets magnets = parentShape.getMagnets();
-        final double shapeWidth = shape.getPath().getBoundingBox().getMaxX();
-        final double shapeHeight = shape.getPath().getBoundingBox().getMaxY();
-
+        final Point2D shapeLocation = shape.getComputedLocation();
+        final Point2D shapeCenter = Geometry.findCenter(shape.getPath().getBoundingBox());
+        final double shapeX = shapeCenter.getX() + shapeLocation.getX();
+        final double shapeY = shapeCenter.getX() + shapeLocation.getY();
         int magnetIndex = -1;
         Double minDistance = null;
+
         //not considering the zero magnet, that is the center.
         for (int i = 1; i < magnets.size(); i++) {
             WiresMagnet magnet = magnets.getMagnet(i);
-            final Point2D shapeLocation = shape.getComputedLocation();
             final double magnetX = magnet.getControl().getLocation().getX();
             final double magnetY = magnet.getControl().getLocation().getY();
-            double distance = abs((abs(shapeLocation.getX()) - abs(magnetX)))
-                    + abs((abs(shapeLocation.getY()) - abs(magnetY)));
-            double distanceEnd = abs((abs(shapeLocation.getX() + shapeWidth) - abs(magnetX)))
-                    + abs((abs(shapeLocation.getY() + shapeHeight) - abs(magnetY)));
+            final double distance = Geometry.distance(magnetX, magnetY, shapeX, shapeY);
+
             //getting shorter distance
-            distance = (distance < distanceEnd ? distance : distanceEnd);
             if (minDistance == null || distance < minDistance) {
                 minDistance = distance;
                 magnetIndex = i;
