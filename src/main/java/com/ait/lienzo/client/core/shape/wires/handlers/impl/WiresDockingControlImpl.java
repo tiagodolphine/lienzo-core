@@ -2,6 +2,7 @@ package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 
 import com.ait.lienzo.client.core.shape.wires.IDockingAcceptor;
 import com.ait.lienzo.client.core.shape.wires.MagnetManager;
@@ -20,8 +21,6 @@ import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.client.core.util.Geometry;
 import com.google.gwt.event.shared.HandlerRegistration;
 
-import static java.lang.Math.abs;
-
 public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         implements WiresDockingControl {
 
@@ -29,7 +28,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     private Point2D intersection;
     private Point2D dockPosition;
     private final Collection<HandlerRegistration> handlerRegistrations = new HashSet<>();
-
+    private final Set<Integer> notAvailableMagnetIds = new HashSet<>();
 
     public WiresDockingControlImpl(WiresShape shape,
                                    ColorMapBackedPicker.PickerOptions pickerOptions) {
@@ -98,6 +97,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         initialPathLocation = null;
         intersection = null;
         removeHandlers();
+        notAvailableMagnetIds.clear();
     }
 
     private void removeHandlers() {
@@ -129,7 +129,8 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
                         getParent() instanceof WiresShape &&
                         getParentShapePart() == PickerPart.ShapePart.BORDER &&
                         (dockingAcceptor.dockingAllowed(getParent(),
-                                                        getShape()));
+                                                        getShape())) &&
+                        null != getCloserMagnet(getShape(), getParent(), false);
     }
 
     @Override
@@ -175,7 +176,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     }
 
     private Point2D calculateCandidateLocation(WiresShape shape, WiresContainer parent) {
-        return calculateCandidateLocation(shape, getCloserMagnet(shape, parent));
+        return calculateCandidateLocation(shape, getCloserMagnet(shape, parent, false));
     }
 
     private Point2D calculateCandidateLocation(WiresShape shape, WiresMagnet shapeMagnet) {
@@ -186,7 +187,26 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         return new Point2D(newX, newY);
     }
 
-    private WiresMagnet getCloserMagnet(WiresShape shape, WiresContainer parent) {
+    /**
+     * Return the closer magnet with preference to not overlap any docked shape
+     * @param shape
+     * @param parent
+     * @return the closer magnet
+     */
+    private WiresMagnet getCloserMagnet(WiresShape shape, WiresContainer parent){
+        final WiresMagnet magnet = getCloserMagnet(shape, parent, false);
+        //in case there is no available magnet than overlap with the closer one to the shape
+        return (magnet != null ? magnet : getCloserMagnet(shape, parent, true));
+    }
+
+    /**
+     * Reurn the closer magnet
+     * @param shape
+     * @param parent
+     * @param allowOverlap should allow overlapping docked shape or not
+     * @return closer magnet or null if none are available
+     */
+    private WiresMagnet getCloserMagnet(WiresShape shape, WiresContainer parent, boolean allowOverlap) {
         final WiresShape parentShape = (WiresShape) parent;
         final MagnetManager.Magnets magnets = parentShape.getMagnets();
         final Point2D shapeLocation = shape.getComputedLocation();
@@ -199,17 +219,32 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         //not considering the zero magnet, that is the center.
         for (int i = 1; i < magnets.size(); i++) {
             WiresMagnet magnet = magnets.getMagnet(i);
-            final double magnetX = magnet.getControl().getLocation().getX();
-            final double magnetY = magnet.getControl().getLocation().getY();
-            final double distance = Geometry.distance(magnetX, magnetY, shapeX, shapeY);
-
-            //getting shorter distance
-            if (minDistance == null || distance < minDistance) {
-                minDistance = distance;
-                magnetIndex = i;
+            //skip magnet that has shape over it
+            if (allowOverlap || !hasShapeOnMagnet(magnet, parentShape)) {
+                final double magnetX = magnet.getControl().getLocation().getX();
+                final double magnetY = magnet.getControl().getLocation().getY();
+                final double distance = Geometry.distance(magnetX, magnetY, shapeX, shapeY);
+                //getting shorter distance
+                if (minDistance == null || distance < minDistance) {
+                    minDistance = distance;
+                    magnetIndex = i;
+                }
             }
         }
-        return magnets.getMagnet(magnetIndex);
+        return (magnetIndex > 0 ? magnets.getMagnet(magnetIndex) : null);
+    }
+
+    private boolean hasShapeOnMagnet(WiresMagnet magnet, WiresShape parent) {
+        if (notAvailableMagnetIds.contains(magnet.getIndex())) {
+            return true;
+        }
+        for (WiresShape child : parent.getChildShapes().toList()) {
+            if (parent.equals(child.getDockedTo()) && magnet.equals(getCloserMagnet(child, parent, true))) {
+                notAvailableMagnetIds.add(magnet.getIndex());
+                return true;
+            }
+        }
+        return false;
     }
 
     public void dock(final WiresShape shape,
@@ -229,6 +264,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
             shape.setLocation(adjust);
         }
         shape.shapeMoved();
+        notAvailableMagnetIds.clear();
 
         //recalculate location during shape resizing
         handlerRegistrations.add(parentWireShape.addWiresResizeStepHandler(new WiresResizeStepHandler() {
