@@ -246,32 +246,4 @@ public class WiresMagnet extends AbstractControlHandle implements Iterable<Wires
         this.m_y = y;
         return this;
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-
-        WiresMagnet that = (WiresMagnet) o;
-
-        if (Double.compare(that.m_x, m_x) != 0) {
-            return false;
-        }
-        return Double.compare(that.m_y, m_y) == 0;
-    }
-
-    @Override
-    public int hashCode() {
-        int result;
-        long temp;
-        temp = Double.doubleToLongBits(m_x);
-        result = (int) (temp ^ (temp >>> 32));
-        temp = Double.doubleToLongBits(m_y);
-        result = 31 * result + (int) (temp ^ (temp >>> 32));
-        return result;
-    }
 }
