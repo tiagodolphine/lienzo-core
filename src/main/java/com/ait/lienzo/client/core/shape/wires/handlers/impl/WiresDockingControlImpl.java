@@ -247,13 +247,17 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     public void dock(final WiresShape shape,
                      final WiresContainer parent,
                      final Point2D location) {
+        final WiresShape parentWireShape = (WiresShape) parent;
+        final WiresMagnet magnet = getCloserMagnet(shape, parent, false);
+
+        if (null == magnet) {
+            throw new IllegalStateException("Cannot dock shape " + shape.uuid() + " there are no availabe dock points");
+        }
+
         shape.setLocation(location);
         shape.removeFromParent();
         parent.add(shape);
         shape.setDockedTo(parent);
-
-        final WiresShape parentWireShape = (WiresShape) parent;
-        final WiresMagnet magnet = getCloserMagnet(shape, parent);
 
         //adjust the location if necessary
         final Point2D adjust = calculateCandidateLocation(shape, magnet);
