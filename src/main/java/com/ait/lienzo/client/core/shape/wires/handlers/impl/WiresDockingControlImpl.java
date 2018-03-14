@@ -275,8 +275,8 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         handlerRegistrations.add(parentWireShape.addWiresResizeStepHandler(new WiresResizeStepHandler() {
             @Override
             public void onShapeResizeStep(WiresResizeStepEvent event) {
-                final WiresMagnet magnet = getCloserMagnet(shape, parent, false);
-                shape.setLocation(calculateCandidateLocation(shape, magnet));
+                final WiresMagnet currentMagnet = parentWireShape.getMagnets().getMagnet(magnet.getIndex());
+                shape.setLocation(calculateCandidateLocation(shape, currentMagnet));
                 shape.shapeMoved();
             }
         }));
