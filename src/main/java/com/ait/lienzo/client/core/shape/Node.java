@@ -487,7 +487,7 @@ public abstract class Node<T extends Node<T>> implements IDrawable<T>
         }
         if (context.isDrag() || isVisible())
         {
-            context.save();
+            context.saveGroup();
 
             final Transform xfrm = getPossibleNodeTransform();
 
@@ -497,7 +497,7 @@ public abstract class Node<T extends Node<T>> implements IDrawable<T>
             }
             drawWithoutTransforms(context, alpha, bounds);
 
-            context.restore();
+            context.restoreGroup();
         }
     }
 

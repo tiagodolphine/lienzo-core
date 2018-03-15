@@ -59,6 +59,14 @@ public class Context2D
         return m_jso;
     }
 
+    public void saveGroup(){
+        m_jso.saveGroup();
+    }
+
+    public void restoreGroup(){
+        m_jso.restoreGroup();
+    }
+
     public void save()
     {
         m_jso.save();
