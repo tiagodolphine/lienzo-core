@@ -2,8 +2,6 @@ package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 import com.ait.lienzo.client.core.shape.wires.IDockingAcceptor;
 import com.ait.lienzo.client.core.shape.wires.MagnetManager;
@@ -29,7 +27,6 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     private Point2D intersection;
     private Point2D dockPosition;
     private final Collection<HandlerRegistration> handlerRegistrations = new ArrayList<>();
-    private final Set<Integer> notAvailableMagnetIds = new HashSet<>();
 
     public WiresDockingControlImpl(WiresShape shape,
                                    ColorMapBackedPicker.PickerOptions pickerOptions) {
@@ -97,11 +94,10 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     public void clear() {
         initialPathLocation = null;
         intersection = null;
-        notAvailableMagnetIds.clear();
     }
 
     private void removeHandlers() {
-        for (HandlerRegistration registration: handlerRegistrations) {
+        for (HandlerRegistration registration : handlerRegistrations) {
             registration.removeHandler();
         }
         handlerRegistrations.clear();
@@ -231,12 +227,8 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     }
 
     private boolean hasShapeOnMagnet(WiresMagnet magnet, WiresShape parent) {
-        if (notAvailableMagnetIds.contains(magnet.getIndex())) {
-            return true;
-        }
         for (WiresShape child : parent.getChildShapes().toList()) {
             if (parent.equals(child.getDockedTo()) && !child.equals(getShape()) && magnet.equals(getCloserMagnet(child, parent, true))) {
-                notAvailableMagnetIds.add(magnet.getIndex());
                 return true;
             }
         }
