@@ -1412,18 +1412,8 @@ public final class Geometry
                             }
                         }
                     }
-                    segmentStart = end;
-                    
-                    if (i == path.size() - 1)
-                    { 
-                    	if (p1.getX() == pathStart.getX() && p1.getY() == pathStart.getY())
-                    	{
-                    		// so the arc ends at the start point.
-                    		addIntersect(intersections, 1, pathStart);                    		
-                    	}
-                    }                    
+                    segmentStart = end;                   
                 }
-                
                 break;
             }
         }
