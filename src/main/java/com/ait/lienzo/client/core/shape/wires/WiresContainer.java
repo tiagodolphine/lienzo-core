@@ -55,13 +55,17 @@ public class WiresContainer
 
     private final NFastArrayList<WiresShape> m_childShapes;
 
-    private IContainer<?, IPrimitive<?>>     m_container;
+    private final IContainer<?, IPrimitive<?>>     m_container;
 
     private WiresContainer                   m_parent;
 
-    private WiresContainer                   m_dockedTo;
-
     private final HandlerManager             m_events;
+
+    private final IAttributesChangedBatcher  m_attributesChangedBatcher;
+
+    private final HandlerRegistrationManager m_registrationManager;
+
+    private WiresContainer                   m_dockedTo;
 
     private WiresManager                     m_wiresManager;
 
@@ -70,10 +74,6 @@ public class WiresContainer
     private boolean                          m_dragging;
 
     private ILayoutHandler                   m_layoutHandler = ILayoutHandler.NONE;
-
-    private final IAttributesChangedBatcher  m_attributesChangedBatcher;
-
-    private final HandlerRegistrationManager m_registrationManager;
 
     public WiresContainer(final IContainer<?, IPrimitive<?>> container)
     {
@@ -142,11 +142,6 @@ public class WiresContainer
     public Point2D getComputedLocation()
     {
         return getGroup().getComputedLocation();
-    }
-
-    public void setContainer(final IContainer<?, IPrimitive<?>> container)
-    {
-        m_container = container;
     }
 
     public WiresContainer getParent()
@@ -326,26 +321,22 @@ public class WiresContainer
         return m_events.addHandler(WiresDragEndEvent.TYPE, Objects.requireNonNull(dragHandler));
     }
 
-    protected void preDestroy()
-    {
-    }
-
     public void destroy()
     {
-        preDestroy();
-
-        removeHandlers();
-
+        for (WiresShape shape : m_childShapes) {
+            remove(shape);
+        }
+        m_childShapes.clear();
+        m_registrationManager.removeHandler();
+        m_container.setAttributesChangedBatcher(null);
+        m_attributesChangedBatcher.cancelAttributesChangedBatcher();
+        // TODO: m_events.removeHandler();
         m_container.removeFromParent();
 
         m_parent = null;
-    }
-
-    private void removeHandlers()
-    {
-        m_registrationManager.removeHandler();
-
-        m_attributesChangedBatcher.cancelAttributesChangedBatcher();
+        m_dockedTo = null;
+        m_wiresManager = null;
+        m_layoutHandler = null;
     }
 
     protected HandlerManager getHandlerManager()

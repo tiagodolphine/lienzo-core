@@ -129,7 +129,7 @@ public class MagnetManager
             list.add(m);
         }
 
-        final String uuid = primTarget.uuid();
+        final String uuid = wiresShape.uuid();
         m_magnetRegistry.put(uuid, magnets);
 
         wiresShape.setMagnets(magnets);
@@ -331,7 +331,8 @@ public class MagnetManager
 
             m_registrationManager.removeHandler();
 
-            m_magnetManager.m_magnetRegistry.remove(m_wiresShape.getPath().uuid());
+            m_magnetManager.m_magnetRegistry.remove(m_wiresShape.uuid());
+
         }
 
         public void destroy(final WiresMagnet magnet)

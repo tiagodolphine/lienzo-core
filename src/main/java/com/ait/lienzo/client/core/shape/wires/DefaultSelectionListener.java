@@ -16,13 +16,15 @@
 
 package com.ait.lienzo.client.core.shape.wires;
 
-import com.ait.lienzo.client.core.shape.Layer;
 import com.ait.lienzo.client.core.shape.wires.handlers.impl.WiresConnectorControlImpl;
 
 public class DefaultSelectionListener implements SelectionListener
 {
-    public DefaultSelectionListener(final Layer layer, final SelectionManager.SelectedItems selectedItems)
+    private final SelectionManager.SelectedItems m_selectedItems;
+
+    public DefaultSelectionListener(SelectionManager.SelectedItems selectedItems)
     {
+        m_selectedItems = selectedItems;
     }
 
     @Override

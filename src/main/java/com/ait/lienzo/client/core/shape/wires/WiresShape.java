@@ -40,9 +40,11 @@ public class WiresShape extends WiresContainer
 {
     private final MultiPath             m_path;
 
-    private Magnets                     m_magnets;
+    private final MultiPath                   m_drawnObject;
 
-    private final LayoutContainer       m_innerLayoutContainer;
+    private final LayoutContainer             m_innerLayoutContainer;
+
+    private Magnets                     m_magnets;
 
     private WiresShapeControlHandleList m_ctrls;
 
@@ -262,24 +264,30 @@ public class WiresShape extends WiresContainer
     }
 
     @Override
-    protected void preDestroy()
+    public void destroy()
     {
-        super.preDestroy();
+        super.destroy();
+
+        removeFromParent();
 
         m_innerLayoutContainer.destroy();
 
-        removeHandlers();
-
-        removeFromParent();
-    }
-
-    private void removeHandlers()
-    {
-        final WiresShapeControlHandleList list = getControls();
-
-        if (null != list)
+        if (null != getControls())
         {
-            list.destroy();
+            getControls().destroy();
+            m_ctrls = null;
+        }
+
+        if (null != getMagnets())
+        {
+            getMagnets().destroy();
+            m_magnets = null;
+        }
+
+        if (null != getControl())
+        {
+            getControl().reset();
+            m_control = null;
         }
     }
 

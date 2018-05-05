@@ -212,11 +212,16 @@ public class WiresLayoutContainer implements LayoutContainer
     @Override
     public void destroy()
     {
-        clear();
-
+        for (HandlerRegistration registration : registrations.values()) {
+            registration.removeHandler();
+        }
+        registrations.clear();
         attrHandlerRegs.destroy();
 
+        children.clear();
+        group.removeAll();
         group.removeFromParent();
+        offset = null;
     }
 
     @Override

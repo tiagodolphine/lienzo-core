@@ -97,19 +97,21 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
 
     public static final int             SELECTION_PADDING = 10;
 
-    private HandlerRegistration         m_selectMouseDownHandlerReg;
+    private final Layer                m_layer;
 
-    private HandlerRegistration         m_selectMouseClickHandlerReg;
+    private final WiresManager         m_wiresManager;
 
-    private HandlerRegistration         m_selectMouseDoubleClickHandlerReg;
+    private final SelectedItems        m_selected;
 
-    private final Layer                 m_layer;
+    private final WiresCompositeControl m_shapeControl;
 
-    private final WiresManager          m_wiresManager;
+    private HandlerRegistration        m_selectMouseDownHandlerReg;
 
-    private final SelectedItems         m_selected;
+    private HandlerRegistration        m_selectMouseClickHandlerReg;
 
-    private SelectionShapeProvider<?>   m_selectionShapeProvider;
+    private HandlerRegistration        m_selectMouseDoubleClickHandlerReg;
+
+    private SelectionShapeProvider     m_selectionShapeProvider;
 
     private BoundingBox                 m_startBoundingBox;
 
@@ -131,8 +133,6 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
 
     private SelectionListener           m_selectionListener;
 
-    private final WiresCompositeControl m_shapeControl;
-
     public SelectionManager(final WiresManager wiresManager)
     {
         m_wiresManager = wiresManager;
@@ -151,7 +151,7 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
         onEventHandlers.setOnMouseUpEventHandle(onMouseXEventHandler);
         onEventHandlers.setOnMouseMoveEventHandle(onMouseXEventHandler);
 
-        m_selectionListener = new DefaultSelectionListener(m_layer, m_selected);
+        m_selectionListener = new DefaultSelectionListener(m_selected);
 
         m_shapeControl = wiresManager.getControlFactory().newCompositeControl(new WiresCompositeControl.Context()
         {
@@ -899,6 +899,17 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
             m_selManager.m_startBoundingBox = null;
         }
 
+        public void destroy()
+        {
+            m_selectionGroup  = false;
+            m_changed.clear();
+            m_shapes.clear();
+            m_connectors.clear();
+            m_externallyConnected.clear();
+            m_bbox = null;
+            m_selManager.m_startBoundingBox = null;
+        }
+
         public void recordPrevious()
         {
             for (final WiresShape shape : m_shapes)
@@ -1125,7 +1136,6 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
                 m_dragSelectionMoveReg.removeHandler();
                 m_dragSelectionEndReg.removeHandler();
                 m_dragSelectionMouseClickReg.removeHandler();
-
                 m_dragSelectionStartReg = null;
                 m_dragSelectionMoveReg = null;
                 m_dragSelectionEndReg = null;
@@ -1153,7 +1163,23 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
             m_selectMouseClickHandlerReg = null;
             m_selectMouseDoubleClickHandlerReg = null;
         }
+
+        m_layer.getViewport().getOnEventHandlers().setOnMouseClickEventHandle(null);
+        m_layer.getViewport().getOnEventHandlers().setOnMouseDoubleClickEventHandle(null);
+        m_layer.getViewport().getOnEventHandlers().setOnMouseDownEventHandle(null);
+        m_layer.getViewport().getOnEventHandlers().setOnMouseMoveEventHandle(null);
+        m_layer.getViewport().getOnEventHandlers().setOnMouseUpEventHandle(null);
+
+        m_selected.destroy();
         destroySelectionShape();
+        m_selectionShapeProvider = null;
+        m_selectionDragHandler = null;
+        m_selectionListener = null;
+        m_startBoundingBox = null;
+        m_start = null;
+        m_startBoundingBox = null;
+        m_startBoundingBox = null;
+        m_startBoundingBox = null;
     }
 
     private double[] calculateSelectionShapeForExternallyConnectedConnectors(final int dx, final int dy, final BoundingBox originalBox)
@@ -1301,9 +1327,8 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
         }
     }
 
-    public Shape<?> getSelectionShape()
-    {
-        return m_selectionShapeProvider.getShape();
+    public Shape<?> getSelectionShape() {
+        return null != m_selectionShapeProvider ? m_selectionShapeProvider.getShape() : null;
     }
 
     public static class RectangleSelectionProvider implements SelectionShapeProvider<RectangleSelectionProvider>
@@ -1341,12 +1366,11 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
         }
 
         @Override
-        public RectangleSelectionProvider clear()
-        {
-            shape.removeFromParent();
-
-            shape = null;
-
+        public RectangleSelectionProvider clear() {
+            if (null != shape) {
+                shape.removeFromParent();
+                shape = null;
+            }
             return this;
         }
 
