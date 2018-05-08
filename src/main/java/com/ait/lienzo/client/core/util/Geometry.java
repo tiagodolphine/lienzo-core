@@ -37,7 +37,6 @@ import com.ait.lienzo.client.core.types.Transform;
 import com.ait.lienzo.shared.core.types.Direction;
 import com.ait.tooling.nativetools.client.collection.NFastArrayList;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArrayJSO;
-import com.ait.tooling.nativetools.client.util.Console;
 
 /**
  * Static utility methods related to geometry and other math.
@@ -1308,6 +1307,13 @@ public final class Geometry
         return intr.push((det * d.getY() - sgn * d.getX() * discSqrt) / dSq + pc.getX(), (-det * d.getX() - Math.abs(d.getY()) * discSqrt) / dSq + pc.getY());
     }
 
+    public static double getRatio(final double pos, final double boxPos, final double boxWidth)
+    {
+        double xDistance = pos - boxPos;
+        int xSgn = sgn(xDistance);
+        return xSgn * (Math.abs(xDistance) / boxWidth);
+    }
+
     public boolean intersectLineRectange(double l0, double l1)
     {
         return false;
@@ -1359,16 +1365,16 @@ public final class Geometry
     public static final Point2DArray getCardinalIntersects(final AbstractMultiPathPartShape<?> shape, Direction[] requestedCardinals)
     {
         final Point2DArray cardinals = getCardinals(shape.getBoundingBox(), requestedCardinals);
-        final Set<Point2D>[] intersections = getCardinalIntersects(shape, cardinals);
+        final Set<Point2D>[] intersections = getPathCenterPointProjectionIntersects(shape, cardinals);
         Point2DArray points = removeInnerPoints(cardinals.get(0), intersections);
 
         return points;
     }
 
-    public static Set<Point2D>[] getCardinalIntersects(AbstractMultiPathPartShape<?> shape, Point2DArray cardinals)
+    public static Set<Point2D>[] getPathCenterPointProjectionIntersects(AbstractMultiPathPartShape<?> shape, Point2DArray points)
     {
         @SuppressWarnings("unchecked")
-        final Set<Point2D>[] intersections = new Set[cardinals.size()];
+        final Set<Point2D>[] intersections = new Set[points.size()];
 
         final NFastArrayList<PathPartList> paths = shape.getActualPathPartListArray();
 
@@ -1376,7 +1382,7 @@ public final class Geometry
 
         for (int i = 0; i < size; i++)
         {
-            getCardinalIntersects(paths.get(i), cardinals, intersections, true);
+            getPathPointsProjectionIntersects(paths.get(i), points, intersections, true);
         }
         return intersections;
     }
@@ -1415,8 +1421,8 @@ public final class Geometry
                               p,
                               width);
 
-            Set<Point2D>[] set = Geometry.getCardinalIntersects(path,
-                                                                new Point2DArray(c,
+            Set<Point2D>[] set = Geometry.getPathCenterPointProjectionIntersects(path,
+                                                                                 new Point2DArray(c,
                                                                                  p));
             Point2DArray points = Geometry.removeInnerPoints(c,
                                                              set);
@@ -1469,7 +1475,7 @@ public final class Geometry
         Point2DArray line = new Point2DArray(l0, l1);
         final Set<Point2D>[] intersections = new Set[line.size()]; // this is a line, there won't be more than one
 
-        getCardinalIntersects(path, line, intersections, false);
+        getPathPointsProjectionIntersects(path, line, intersections, false);
 
         Point2DArray intersectPoints = null;
         if ( intersections != null && intersections[1] != null && !intersections[1].isEmpty() )
@@ -1485,9 +1491,16 @@ public final class Geometry
 
     }
 
-    public static void getCardinalIntersects(PathPartList path, Point2DArray cardinals, Set<Point2D>[] intersections, boolean addCenter)
+    public static Point2D getPathPointsProjectionIntersects(MultiPath path, Point2D center, Point2D point)
     {
-        Point2D center = cardinals.get(0);
+        Set<Point2D>[] intersections = getPathCenterPointProjectionIntersects(path,  new Point2DArray(center, point));
+        Point2D intersection = (Point2D) intersections[0].toArray()[0];
+        return intersection;
+    }
+
+    public static void getPathPointsProjectionIntersects(PathPartList path, Point2DArray points, Set<Point2D>[] intersections, boolean addCenter)
+    {
+        Point2D center = points.get(0);
         Point2D pathStart = new Point2D(0, 0);
         Point2D segmentStart = pathStart;
         
@@ -1497,14 +1510,14 @@ public final class Geometry
         for (; i < path.size(); i++)
         {
             PathPartEntryJSO entry = path.get(i);
-            NFastDoubleArrayJSO points = entry.getPoints();
+            NFastDoubleArrayJSO entryPoints = entry.getPoints();
 
             switch (entry.getCommand())
             {
                 case PathPartEntryJSO.MOVETO_ABSOLUTE:
                 {
-                    points = entry.getPoints();
-                    Point2D m = new Point2D(points.get(0), points.get(1));
+                    entryPoints = entry.getPoints();
+                    Point2D m = new Point2D(entryPoints.get(0), entryPoints.get(1));
                     if (i == 0)
                     {
                         // This position is needed, if we close the path.
@@ -1515,14 +1528,14 @@ public final class Geometry
                 }
                 case PathPartEntryJSO.LINETO_ABSOLUTE:
                 {
-                    points = entry.getPoints();
-                    double x0 = points.get(0);
-                    double y0 = points.get(1);
+                    entryPoints = entry.getPoints();
+                    double x0 = entryPoints.get(0);
+                    double y0 = entryPoints.get(1);
                     Point2D end = new Point2D(x0, y0);
-                    for (int j = 1; j < cardinals.size(); j++)
+                    for (int j = 1; j < points.size(); j++)
                     {
-                        Point2D cardinal = cardinals.get(j);
-                        Point2D intersectPoint = Geometry.intersectLineLine(center, cardinal, segmentStart, end);
+                        Point2D point = points.get(j);
+                        Point2D intersectPoint = Geometry.intersectLineLine(center, point, segmentStart, end);
                         if (intersectPoint != null)
                         {
                             addIntersect(intersections, j, intersectPoint);
@@ -1536,10 +1549,10 @@ public final class Geometry
                     double x0 = pathStart.getX();
                     double y0 = pathStart.getY();
                     Point2D end = new Point2D(x0, y0);
-                    for (int j = 1; j < cardinals.size(); j++)
+                    for (int j = 1; j < points.size(); j++)
                     {
-                        Point2D cardinal = cardinals.get(j);
-                        Point2D intersectPoint = Geometry.intersectLineLine(center, cardinal, segmentStart, end);
+                        Point2D point = points.get(j);
+                        Point2D intersectPoint = Geometry.intersectLineLine(center, point, segmentStart, end);
                         if (intersectPoint != null)
                         {
                             addIntersect(intersections, j, intersectPoint);
@@ -1550,22 +1563,22 @@ public final class Geometry
                 }
                 case PathPartEntryJSO.CANVAS_ARCTO_ABSOLUTE:
                 {
-                    points = entry.getPoints();
+                    entryPoints = entry.getPoints();
 
-                    double x0 = points.get(0);
-                    double y0 = points.get(1);
+                    double x0 = entryPoints.get(0);
+                    double y0 = entryPoints.get(1);
                     Point2D p0 = new Point2D(x0, y0);
 
-                    double x1 = points.get(2);
-                    double y1 = points.get(3);
+                    double x1 = entryPoints.get(2);
+                    double y1 = entryPoints.get(3);
                     Point2D p1 = new Point2D(x1, y1);
                     Point2D end = p1;
 
-                    double r = points.get(4);
-                    for (int j = 1; j < cardinals.size(); j++)
+                    double r = entryPoints.get(4);
+                    for (int j = 1; j < points.size(); j++)
                     {
-                        final Point2D cardinal = cardinals.get(j);
-                        final Point2DArray intersectPoints = Geometry.intersectLineArcTo(center, cardinal, segmentStart, p0, p1, r);
+                        final Point2D point = points.get(j);
+                        final Point2DArray intersectPoints = Geometry.intersectLineArcTo(center, point, segmentStart, p0, p1, r);
 
                         if (intersectPoints.size() > 0)
                         {
@@ -1583,20 +1596,20 @@ public final class Geometry
                     final double x0 = segmentStart.getX();
                     final double y0 = segmentStart.getY();
 
-                    final double x1 = points.get(0);
-                    final double y1 = points.get(1);
+                    final double x1 = entryPoints.get(0);
+                    final double y1 = entryPoints.get(1);
 
-                    final double x2 = points.get(2);
-                    final double y2 = points.get(3);
+                    final double x2 = entryPoints.get(2);
+                    final double y2 = entryPoints.get(3);
 
-                    final double x3 = points.get(4);
-                    final double y3 = points.get(5);
+                    final double x3 = entryPoints.get(4);
+                    final double y3 = entryPoints.get(5);
 
                     final Point2D end = new Point2D(x3, y3);
 
-                    for (int j = 1; j < cardinals.size(); j++)
+                    for (int j = 1; j < points.size(); j++)
                     {
-                        final Point2D cardinal = cardinals.get(j);
+                        final Point2D cardinal = points.get(j);
                         double[] xvals = new double[] { x0, x1, x2, x3};
                         double[] yvals = new double[] { y0, y1, y2, y3};
 
@@ -1630,7 +1643,7 @@ public final class Geometry
         @SuppressWarnings("unchecked")
         final Set<Point2D>[] intersections = new Set[cardinals.size()];// c is removed, so -1
 
-        getCardinalIntersects(path, cardinals, intersections, true);
+        getPathPointsProjectionIntersects(path, cardinals, intersections, true);
 
         return removeInnerPoints(cardinals.get(0), intersections);
     }
@@ -1848,7 +1861,7 @@ public final class Geometry
         points.push(center);
         points.push(projectionPoint);
 
-        Set<Point2D>[] intersects = Geometry.getCardinalIntersects(path, points);
+        Set<Point2D>[] intersects = Geometry.getPathCenterPointProjectionIntersects(path, points);
 
         Point2D nearest = null;
         for (Set<Point2D> set : intersects)
