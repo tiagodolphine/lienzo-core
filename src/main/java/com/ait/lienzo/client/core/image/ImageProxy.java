@@ -685,7 +685,6 @@ public class ImageProxy<T extends AbstractImageShape<T>> implements ImageDataFil
         RootPanel.get().remove(m_img);
         m_img.removeFromParent();
         m_image.removeFromParent();
-        m_jsimg.removeFromParent();
         m_normalImage.clear();
         m_filterImage.clear();
         m_selectImage.clear();
