@@ -36,6 +36,8 @@ public interface INativeContext2D
 
     void restoreContainer();
 
+    void save(String id);
+
     void save();
 
     void restore();
