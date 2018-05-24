@@ -46,7 +46,8 @@ public class Context2D
 
     public Context2D(final CanvasElement element)
     {
-        this(NativeContext2D.make(element));
+        //todo: set the enable hidpi flag, for now it is false as default
+        this(NativeContext2D.make(element, false));
     }
 
     public Context2D(final INativeContext2D jso)
