@@ -53,7 +53,7 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
 
     public final native void initDeviceRatio()
         /*-{
-            if(!this.enableHidpi){
+            if(!this.hidpiEnabled){
                 return;
             }
 
@@ -85,7 +85,7 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
         this.imageSmoothingEnabled = false;
         this.scalingRatio = 1;
 
-        this.enableHidpi = enableHidpi;
+        this.hidpiEnabled = enableHidpi;
         if(enableHidpi) {
             this.backingStorePixelRatio = this.backingStorePixelRatio
                     || this.webkitBackingStorePixelRatio
@@ -131,9 +131,9 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
 		return this;
     }-*/;
 
-    public final native boolean isEnableHidpi()
+    public final native boolean isHidpiEnabled()
     /*-{
-        return this.enableHidpi;
+        return this.hidpiEnabled;
     }-*/;
 
     public final void saveContainer(String id) {
