@@ -43,9 +43,9 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
     	return element.getContext("2d");
     }-*/;
 
-    public static final NativeContext2D make(final CanvasElement element)
+    public static final NativeContext2D make(final CanvasElement element, final boolean enableHidpi)
     {
-        return make_0(element).init();
+        return make_0(element).init(enableHidpi);
     }
 
     protected NativeContext2D()
@@ -54,40 +54,46 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
 
     @Override
     public final native void initDeviceRatio()
+        /*-{
+            if (!this.hidpiEnabled) {
+                return;
+            }
+
+            var canvas = this.canvas;
+
+            var devicePixelRatio = window.devicePixelRatio || 1
+            var backingStoreRatio = this.backingStorePixelRatio
+
+            if (devicePixelRatio !== backingStoreRatio) {
+                this.scalingRatio = devicePixelRatio / backingStoreRatio;
+
+                var oldWidth = canvas.width;
+                var oldHeight = canvas.height;
+
+                canvas.width = Math.round(oldWidth * this.scalingRatio);
+                canvas.height = Math.round(oldHeight * this.scalingRatio);
+
+                canvas.style.width = oldWidth + "px";
+                canvas.style.height = oldHeight + "px";
+
+                this.scale(this.scalingRatio, this.scalingRatio);
+            }
+
+        }-*/;
+
+    private final native NativeContext2D init(boolean enableHidpi)
     /*-{
-        var canvas = this.canvas;
-
-        var devicePixelRatio = window.devicePixelRatio || 1
-        var backingStoreRatio = this.backingStorePixelRatio
-
-        if (devicePixelRatio !== backingStoreRatio)
-        {
-            this.scalingRatio = devicePixelRatio / backingStoreRatio;
-
-            var oldWidth = canvas.width;
-            var oldHeight = canvas.height;
-
-            canvas.width = Math.round(oldWidth * this.scalingRatio);
-            canvas.height = Math.round(oldHeight * this.scalingRatio);
-
-            canvas.style.width = oldWidth + "px";
-            canvas.style.height = oldHeight + "px";
-
-            this.scale(this.scalingRatio, this.scalingRatio);
-        }
-
-     }-*/;
-
-    private final native NativeContext2D init()
-    /*-{
-    	this.imageSmoothingEnabled = false;
+        this.imageSmoothingEnabled = false;
         this.scalingRatio = 1;
 
-        this.backingStorePixelRatio = this.backingStorePixelRatio
-            || this.webkitBackingStorePixelRatio
-            || this.mozBackingStorePixelRatio
-            || this.msBackingStorePixelRatio
-            || this.oBackingStorePixelRatio || 1;
+        this.hidpiEnabled = enableHidpi;
+        if(enableHidpi) {
+            this.backingStorePixelRatio = this.backingStorePixelRatio
+                    || this.webkitBackingStorePixelRatio
+                    || this.mozBackingStorePixelRatio
+                    || this.msBackingStorePixelRatio
+                    || this.oBackingStorePixelRatio || 1;
+        }
 
     	if (this.setLineDash) {
     		this.setLineDashOffset = function(d) {
@@ -124,6 +130,11 @@ public class NativeContext2D extends JavaScriptObject implements INativeContext2
     		};
     	}
     	return this;
+    }-*/;
+
+    public final native boolean isHidpiEnabled()
+    /*-{
+        return this.hidpiEnabled;
     }-*/;
 
     @Override
