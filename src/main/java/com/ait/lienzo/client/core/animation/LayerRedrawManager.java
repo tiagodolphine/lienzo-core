@@ -13,21 +13,21 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-
 package com.ait.lienzo.client.core.animation;
 
 import com.ait.lienzo.client.core.shape.Layer;
 import com.ait.tooling.nativetools.client.collection.NFastArrayList;
 import com.google.gwt.animation.client.AnimationScheduler;
 import com.google.gwt.animation.client.AnimationScheduler.AnimationCallback;
+import com.google.gwt.dom.client.Element;
 
 public final class LayerRedrawManager
 {
-    private static final LayerRedrawManager INSTANCE = new LayerRedrawManager();
+    private static final LayerRedrawManager    INSTANCE = new LayerRedrawManager();
 
-    private final AnimationCallback         m_redraw;
+    private final        AnimationCallback     m_redraw;
 
-    private NFastArrayList<Layer>           m_layers = new NFastArrayList<Layer>();
+    private              NFastArrayList<Layer> m_layers = new NFastArrayList<Layer>();
 
     public static final LayerRedrawManager get()
     {
@@ -45,9 +45,8 @@ public final class LayerRedrawManager
 
                 if (size > 0)
                 {
-                    final NFastArrayList<Layer> list = m_layers;
-
-                    m_layers = new NFastArrayList<Layer>();
+                    final NFastArrayList<Layer> list = m_layers.copy();
+                    m_layers.clear();
 
                     for (int i = 0; i < size; i++)
                     {
@@ -65,18 +64,17 @@ public final class LayerRedrawManager
             if (false == m_layers.contains(layer))
             {
                 m_layers.add(layer.doBatchScheduled());
-
-                kick();
+                kick(layer.getElement());
             }
         }
         return layer;
     }
 
-    private void kick()
+    private void kick(Element layerElement)
     {
-        if (m_layers.size() > 0)
+        if (!m_layers.isEmpty())
         {
-            AnimationScheduler.get().requestAnimationFrame(m_redraw);
+            AnimationScheduler.get().requestAnimationFrame(m_redraw, layerElement);
         }
     }
 }
