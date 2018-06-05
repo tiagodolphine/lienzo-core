@@ -23,11 +23,11 @@ import com.google.gwt.dom.client.Element;
 
 public final class LayerRedrawManager
 {
-    private static final LayerRedrawManager    INSTANCE = new LayerRedrawManager();
+    private static final LayerRedrawManager INSTANCE = new LayerRedrawManager();
 
-    private final        AnimationCallback     m_redraw;
+    private final AnimationCallback         m_redraw;
 
-    private              NFastArrayList<Layer> m_layers = new NFastArrayList<Layer>();
+    private NFastArrayList<Layer>           m_layers = new NFastArrayList<Layer>();
 
     public static final LayerRedrawManager get()
     {
@@ -45,8 +45,9 @@ public final class LayerRedrawManager
 
                 if (size > 0)
                 {
-                    final NFastArrayList<Layer> list = m_layers.copy();
-                    m_layers.clear();
+                    final NFastArrayList<Layer> list = m_layers;
+
+                    m_layers = new NFastArrayList<Layer>();
 
                     for (int i = 0; i < size; i++)
                     {
