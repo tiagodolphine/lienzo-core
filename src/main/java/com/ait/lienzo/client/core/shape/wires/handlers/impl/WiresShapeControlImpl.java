@@ -1,5 +1,7 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.Collection;
+
 import com.ait.lienzo.client.core.shape.wires.PickerPart;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
@@ -34,6 +36,7 @@ public class WiresShapeControlImpl
     private boolean c_accept;
     private boolean d_accept;
     private WiresConnector[] m_connectorsWithSpecialConnections;
+    private Collection<WiresConnector> m_connectors;
 
     public WiresShapeControlImpl(WiresShape shape,
                                  WiresManager wiresManager) {
@@ -94,8 +97,19 @@ public class WiresShapeControlImpl
             m_alignAndDistributeControl.dragStart();
         }
 
-        // index nested shapes that have special connectors, to avoid searching during drag.
+        // index nested shapes that have special m_connectors, to avoid searching during drag.
         m_connectorsWithSpecialConnections = ShapeControlUtils.collectionSpecialConnectors(getShape());
+
+        m_connectors = setConnectorsMoveStart(ShapeControlUtils.getConnectors(getShape()).values(), x, y);
+    }
+
+    private Collection<WiresConnector> setConnectorsMoveStart(Collection<WiresConnector> connectors, double x, double y) {
+        if (!connectors.isEmpty()) {
+            for (WiresConnector connector : connectors) {
+                connector.getWiresConnectorHandler().getControl().onMoveStart(x, y);
+            }
+        }
+        return  connectors;
     }
 
     @Override
@@ -182,7 +196,11 @@ public class WiresShapeControlImpl
         m_adjust = dxy;
         parentPickerControl.onMoveAdjusted(m_adjust);
 
+        ShapeControlUtils.updateConnectors(m_connectors, dx, dy);
+
         shapeUpdated(false);
+        ShapeControlUtils.checkForAndApplyLineSplice(getWiresManager(),
+                                                     getShape());
 
         return adjust;
     }
@@ -275,7 +293,6 @@ public class WiresShapeControlImpl
             getWiresManager().getSelectionManager().selected(getShape(),
                                                              event.isShiftKeyDown());
         }
-        getShape().getGroup().getLayer().draw();
     }
 
     @Override

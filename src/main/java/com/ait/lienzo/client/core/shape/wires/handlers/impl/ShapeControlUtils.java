@@ -1,7 +1,9 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.ait.lienzo.client.core.shape.IDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.MultiPath;
@@ -11,6 +13,7 @@ import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresMagnet;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.WiresShape;
+import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorHandler;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.PathPartList;
 import com.ait.lienzo.client.core.types.Point2D;
@@ -31,13 +34,17 @@ public class ShapeControlUtils {
 
     public static void collectionSpecialConnectors(WiresShape shape,
                                                    Map<String, WiresConnector> connectors) {
+        getConnectors(shape, connectors, true);
+    }
+
+    private static Map<String, WiresConnector> getConnectors(WiresShape shape, Map<String, WiresConnector> connectors, boolean onlySpecial) {
         if (shape.getMagnets() != null) {
             // start with 0, as we can have center connections too
             for (int i = 0, size0 = shape.getMagnets().size(); i < size0; i++) {
                 WiresMagnet m = shape.getMagnets().getMagnet(i);
                 for (int j = 0, size1 = m.getConnectionsSize(); j < size1; j++) {
                     WiresConnection connection = m.getConnections().get(j);
-                    if (connection.isSpecialConnection()) {
+                    if ((onlySpecial && connection.isSpecialConnection()) || !onlySpecial) {
                         connectors.put(connection.getConnector().getGroup().uuid(),
                                        connection.getConnector());
                     }
@@ -45,9 +52,31 @@ public class ShapeControlUtils {
             }
         }
 
+        if(shape.getChildShapes() == null){
+            return connectors;
+        }
+
         for (WiresShape child : shape.getChildShapes()) {
-            collectionSpecialConnectors(child,
-                                        connectors);
+            getConnectors(child, connectors, onlySpecial);
+        }
+        return connectors;
+    }
+
+    public static Map<String, WiresConnector> getConnectors(WiresShape shape) {
+        return getConnectors(shape, new HashMap<String, WiresConnector>(), false);
+    }
+
+    public static void updateConnectors(Collection<WiresConnector> connectors, double dx, double dy) {
+        if (!connectors.isEmpty()) {
+            // Update m_connectors and connections.
+            for (WiresConnector connector : connectors) {
+                WiresConnectorHandler handler = connector.getWiresConnectorHandler();
+                handler.getControl().move(dx,
+                                          dy,
+                                          true,
+                                          true);
+                WiresConnector.updateHeadTailForRefreshedConnector(connector);
+            }
         }
     }
 
