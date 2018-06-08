@@ -1,19 +1,24 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.ait.lienzo.client.core.shape.IDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.MultiPath;
 import com.ait.lienzo.client.core.shape.OrthogonalPolyLine;
-import com.ait.lienzo.client.core.shape.wires.*;
+import com.ait.lienzo.client.core.shape.wires.WiresConnection;
+import com.ait.lienzo.client.core.shape.wires.WiresConnector;
+import com.ait.lienzo.client.core.shape.wires.WiresContainer;
+import com.ait.lienzo.client.core.shape.wires.WiresMagnet;
+import com.ait.lienzo.client.core.shape.wires.WiresManager;
+import com.ait.lienzo.client.core.shape.wires.WiresShape;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorHandler;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.PathPartList;
 import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.core.util.Geometry;
-
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ShapeControlUtils {
 
