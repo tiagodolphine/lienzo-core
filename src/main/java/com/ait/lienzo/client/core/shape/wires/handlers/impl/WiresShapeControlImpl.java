@@ -16,6 +16,8 @@
 
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.Collection;
+
 import com.ait.lienzo.client.core.shape.wires.PickerPart;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
@@ -57,6 +59,8 @@ public class WiresShapeControlImpl extends AbstractWiresBoundsConstraintControl 
     private boolean                              d_accept;
 
     private WiresConnector[]                     m_connectorsWithSpecialConnections;
+
+    private Collection<WiresConnector>           m_connectors;
 
     public WiresShapeControlImpl(final WiresShape shape, final WiresManager wiresManager)
     {
@@ -127,8 +131,22 @@ public class WiresShapeControlImpl extends AbstractWiresBoundsConstraintControl 
             m_alignAndDistributeControl.dragStart();
         }
 
-        // index nested shapes that have special connectors, to avoid searching during drag.
+        // index nested shapes that have special m_connectors, to avoid searching during drag.
         m_connectorsWithSpecialConnections = ShapeControlUtils.collectionSpecialConnectors(getShape());
+
+        //setting the child connectors that should be moved with the Shape
+        if(getShape().getChildShapes() != null && !getShape().getChildShapes().isEmpty()) {
+            m_connectors = setConnectorsMoveStart(ShapeControlUtils.getChildConnectorWithinShape(getShape()).values(), x, y);
+        }
+    }
+
+    private Collection<WiresConnector> setConnectorsMoveStart(Collection<WiresConnector> connectors, double x, double y) {
+        if (connectors != null && !connectors.isEmpty()) {
+            for (WiresConnector connector : connectors) {
+                connector.getWiresConnectorHandler().getControl().onMoveStart(x, y);
+            }
+        }
+        return  connectors;
     }
 
     @Override
@@ -222,7 +240,11 @@ public class WiresShapeControlImpl extends AbstractWiresBoundsConstraintControl 
 
         parentPickerControl.onMoveAdjusted(m_adjust);
 
+        ShapeControlUtils.updateConnectors(m_connectors, dx, dy);
+
         shapeUpdated(false);
+        ShapeControlUtils.checkForAndApplyLineSplice(getWiresManager(),
+                                                     getShape());
 
         return adjust;
     }
@@ -342,7 +364,6 @@ public class WiresShapeControlImpl extends AbstractWiresBoundsConstraintControl 
         {
             getWiresManager().getSelectionManager().selected(getShape(), event.isShiftKeyDown());
         }
-        getShape().getGroup().getLayer().draw();
     }
 
     @Override

@@ -157,19 +157,11 @@ public class WiresCompositeControlImpl extends AbstractWiresBoundsConstraintCont
                 }
             }
         }
-        final Collection<WiresConnector> connectors = m_selectedConnectors;
 
-        if (!connectors.isEmpty())
-        {
-            // Update connectors and connections.
-            for (final WiresConnector connector : connectors)
-            {
-                final WiresConnectorHandler handler = connector.getWiresConnectorHandler();
-                handler.getControl().move(dx, dy, true, true);
-                WiresConnector.updateHeadTailForRefreshedConnector(connector);
-            }
-        }
-        ShapeControlUtils.updateSpecialConnections(m_connectorsWithSpecialConnections, false);
+        ShapeControlUtils.updateConnectors(m_selectedConnectors, dx, dy);
+
+        ShapeControlUtils.updateSpecialConnections(m_connectorsWithSpecialConnections,
+                                                   false);
 
         return false;
     }

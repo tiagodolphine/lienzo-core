@@ -1025,7 +1025,7 @@ public final class Geometry
         return arcIntersectPoints;
     }
 
-    private static final boolean intersectPointWithinBounding(final Point2D p, final Point2D a0, final Point2D a1)
+    public static final boolean intersectPointWithinBounding(final Point2D p, final Point2D a0, final Point2D a1)
     {
         boolean withinX = false;
 
