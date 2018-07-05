@@ -37,7 +37,6 @@ import com.ait.lienzo.client.core.types.Transform;
 import com.ait.lienzo.shared.core.types.Direction;
 import com.ait.tooling.nativetools.client.collection.NFastArrayList;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArrayJSO;
-import com.ait.tooling.nativetools.client.util.Console;
 
 /**
  * Static utility methods related to geometry and other math.
@@ -601,10 +600,6 @@ public final class Geometry
 
     public static final double distance(final double dx, final double dy)
     {
-        if (dx == 0 && dy == 0)
-        {
-            Console.get().info("zero");
-        }
         return Math.sqrt((dx * dx) + (dy * dy));
     }
 

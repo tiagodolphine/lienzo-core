@@ -122,7 +122,6 @@ public class WiresCompositeControlImpl
                 i = 0;
                 for (WiresShape shape : shapes) {
                     shape.getControl().getParentPickerControl().setShapeLocation(locs[i++]);
-                    postUpdateShape(shape);
                 }
             }
         }
@@ -235,11 +234,9 @@ public class WiresCompositeControlImpl
         int i = 0;
         for (WiresShape shape : selectedShapes) {
             shape.getControl().getContainmentControl().execute();
-            postUpdateShape(shape);
         }
 
         for (WiresConnector connector : selectedConnectors) {
-            WiresConnectorHandler handler = connector.getWiresConnectorHandler();
             WiresConnector.updateHeadTailForRefreshedConnector(connector);
         }
 
@@ -270,6 +267,13 @@ public class WiresCompositeControlImpl
             WiresConnector.updateHeadTailForRefreshedConnector(connector);
         }
         clearState();
+    }
+
+    @Override
+    public void destroy() {
+        for (WiresShape shape : selectedShapes) {
+            shape.getControl().destroy();
+        }
     }
 
     @Override
@@ -315,11 +319,6 @@ public class WiresCompositeControlImpl
 
     private static void enableDocking(WiresShapeControl control) {
         control.getDockingControl().setEnabled(true);
-    }
-
-    private void postUpdateShape(final WiresShape shape) {
-        shape.getControl().getMagnetsControl().shapeMoved();
-        ShapeControlUtils.updateNestedShapes(shape);
     }
 
     private static WiresShape[] toArray(final Collection<WiresShape> shapes) {
