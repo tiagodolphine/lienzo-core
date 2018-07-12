@@ -1,5 +1,7 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.Set;
+
 import com.ait.lienzo.client.core.shape.wires.IDockingAcceptor;
 import com.ait.lienzo.client.core.shape.wires.MagnetManager;
 import com.ait.lienzo.client.core.shape.wires.PickerPart;
@@ -16,6 +18,7 @@ import com.ait.lienzo.client.core.shape.wires.handlers.WiresDockingControl;
 import com.ait.lienzo.client.core.shape.wires.picker.ColorMapBackedPicker;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.Point2D;
+import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.core.util.Geometry;
 import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
 import com.google.gwt.event.shared.HandlerRegistration;
@@ -81,19 +84,22 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
                                 double dy) {
         m_intersection = null;
         if (isAllow()) {
-            WiresShape shape = getShape();
-            WiresShape parent = (WiresShape) getParent();
-            final Point2D parentLocation = parent.getComputedLocation();
-            BoundingBox box = shape.getPath().getBoundingBox();
-
-
-            final double shapeX = m_absInitialPathLocation.getX() + dx + (box.getWidth() / 2) - parentLocation.getX();
-            final double shapeY = m_absInitialPathLocation.getY() + dy + (box.getHeight() / 2)- parentLocation.getY();
-
-            this.m_intersection = Geometry.findIntersection((int) shapeX, (int) shapeY,
-                                                          parent.getPath());
+            m_intersection = findIntersection(dx,
+                                              dy,
+                                              m_absInitialPathLocation,
+                                              getShape(),
+                                              (WiresShape) getParent());
         }
-        return null != this.m_intersection;
+        return null != m_intersection;
+    }
+
+    private Point2D findIntersection(double dx, double dy, final Point2D initialPathLocation, final WiresShape shape,  final WiresShape parent) {
+        final Point2D parentLocation = parent.getComputedLocation();
+        final BoundingBox box = shape.getPath().getBoundingBox();
+        final double shapeX = initialPathLocation.getX() + dx + (box.getWidth() / 2) - parentLocation.getX();
+        final double shapeY = initialPathLocation.getY() + dy + (box.getHeight() / 2)- parentLocation.getY();
+
+        return Geometry.findIntersection((int) shapeX, (int) shapeY, parent.getPath());
     }
 
     @Override
@@ -189,50 +195,6 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
                                                  getShape());
     }
 
-    /**
-     * Reurn the closer magnet
-     * @param shape
-     * @param parent
-     * @param allowOverlap should allow overlapping docked shape or not
-     * @return closer magnet or null if none are available
-     */
-    private WiresMagnet getCloserMagnet(WiresShape shape, WiresContainer parent, boolean allowOverlap) {
-        final WiresShape parentShape = (WiresShape) parent;
-        final MagnetManager.Magnets magnets = parentShape.getMagnets();
-        final Point2D shapeLocation = shape.getComputedLocation();
-        final Point2D shapeCenter = Geometry.findCenter(shape.getPath().getBoundingBox());
-        final double shapeX = shapeCenter.getX() + shapeLocation.getX();
-        final double shapeY = shapeCenter.getY() + shapeLocation.getY();
-        int magnetIndex = -1;
-        Double minDistance = null;
-
-        //not considering the zero magnet, that is the center.
-        for (int i = 1; i < magnets.size(); i++) {
-            WiresMagnet magnet = magnets.getMagnet(i);
-            //skip magnet that has shape over it
-            if (allowOverlap || !hasShapeOnMagnet(magnet, parentShape)) {
-                final double magnetX = magnet.getControl().getLocation().getX();
-                final double magnetY = magnet.getControl().getLocation().getY();
-                final double distance = Geometry.distance(magnetX, magnetY, shapeX, shapeY);
-                //getting shorter distance
-                if (minDistance == null || distance < minDistance) {
-                    minDistance = distance;
-                    magnetIndex = i;
-                }
-            }
-        }
-        return (magnetIndex > 0 ? magnets.getMagnet(magnetIndex) : null);
-    }
-
-    private boolean hasShapeOnMagnet(WiresMagnet magnet, WiresShape parent) {
-        for (WiresShape child : parent.getChildShapes().toList()) {
-            if (parent.equals(child.getDockedTo()) && !child.equals(getShape()) && magnet.equals(getCloserMagnet(child, parent, true))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     void move(final Point2D absLocation) {
         moveChild(getShape(),
                   getParent(),
@@ -246,6 +208,14 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         shape.setLocation(relLocation);
     }
 
+    @Override
+    public Point2D getAdjustedCandidateLocation(final WiresContainer parent) {
+        if (m_absInitialPathLocation == null || m_intersection == null) {
+            m_absInitialPathLocation = getShape().getPath().getComputedLocation();
+            m_intersection = findIntersection(0, 0, m_absInitialPathLocation, getShape(), (WiresShape) parent);
+        }
+        return getCandidateLocation();
+    }
 
     @Override
     public void dock(final WiresContainer parent) {
