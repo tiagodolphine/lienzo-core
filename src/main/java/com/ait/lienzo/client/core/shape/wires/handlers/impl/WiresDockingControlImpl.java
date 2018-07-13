@@ -144,7 +144,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
         final WiresShape shape = getShape();
         if (m_absInitialPathLocation == null || m_intersection == null) {
             m_absInitialPathLocation = shape.getPath().getComputedLocation();
-            m_intersection = findIntersection(0, 0, m_absInitialPathLocation, shape, (WiresShape) getParent());
+            m_intersection = findIntersection(0, 0, m_absInitialPathLocation, shape, (WiresShape) shape.getParent());
         }
         return getCandidateLocation(shape);
     }
