@@ -30,8 +30,6 @@ public interface WiresDockingControl extends WiresMoveControl,
 
     Point2D getCandidateLocation();
 
-    Point2D getAdjustedCandidateLocation(WiresContainer parent);
-
     void dock(WiresContainer parent);
 
     void undock();

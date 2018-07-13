@@ -1,13 +1,9 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
-import java.util.Set;
-
 import com.ait.lienzo.client.core.shape.wires.IDockingAcceptor;
-import com.ait.lienzo.client.core.shape.wires.MagnetManager;
 import com.ait.lienzo.client.core.shape.wires.PickerPart;
 import com.ait.lienzo.client.core.shape.wires.WiresContainer;
 import com.ait.lienzo.client.core.shape.wires.WiresLayer;
-import com.ait.lienzo.client.core.shape.wires.WiresMagnet;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.WiresShape;
 import com.ait.lienzo.client.core.shape.wires.event.WiresResizeEndEvent;
@@ -18,7 +14,6 @@ import com.ait.lienzo.client.core.shape.wires.handlers.WiresDockingControl;
 import com.ait.lienzo.client.core.shape.wires.picker.ColorMapBackedPicker;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.Point2D;
-import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.core.util.Geometry;
 import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
 import com.google.gwt.event.shared.HandlerRegistration;
@@ -146,7 +141,12 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
 
     @Override
     public Point2D getCandidateLocation() {
-        return getCandidateLocation(getShape());
+        final WiresShape shape = getShape();
+        if (m_absInitialPathLocation == null || m_intersection == null) {
+            m_absInitialPathLocation = shape.getPath().getComputedLocation();
+            m_intersection = findIntersection(0, 0, m_absInitialPathLocation, shape, (WiresShape) getParent());
+        }
+        return getCandidateLocation(shape);
     }
 
     private Point2D getCandidateLocation(WiresShape shape) {
@@ -206,15 +206,6 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
                            final Point2D absLocation) {
         final Point2D relLocation = absLocation.sub(parent.getComputedLocation());
         shape.setLocation(relLocation);
-    }
-
-    @Override
-    public Point2D getAdjustedCandidateLocation(final WiresContainer parent) {
-        if (m_absInitialPathLocation == null || m_intersection == null) {
-            m_absInitialPathLocation = getShape().getPath().getComputedLocation();
-            m_intersection = findIntersection(0, 0, m_absInitialPathLocation, getShape(), (WiresShape) parent);
-        }
-        return getCandidateLocation();
     }
 
     @Override
