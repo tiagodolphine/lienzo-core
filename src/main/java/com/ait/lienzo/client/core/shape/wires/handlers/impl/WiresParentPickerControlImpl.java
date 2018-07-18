@@ -28,7 +28,7 @@ import com.ait.lienzo.client.core.types.Point2D;
 
 public class WiresParentPickerControlImpl implements WiresParentPickerControl, WiresMouseControl
 {
-    private final WiresShapeLocationControlImpl shapeLocationControl;
+    private final ColorMapBackendPickerIndex index;
 
     private final ColorMapBackedPickerProvider  colorMapBackedPickerProvider;
 
@@ -50,6 +50,7 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
         this.shapeLocationControl = shapeLocationControl;
 
         this.colorMapBackedPickerProvider = new ColorMapBackedPickerProviderImpl(pickerOptions);
+        this.index = new ColorMapBackendPickerIndex();
     }
 
     public WiresParentPickerControlImpl(final WiresShapeLocationControlImpl shapeLocationControl, final ColorMapBackedPickerProvider colorMapBackedPickerProvider)
@@ -57,6 +58,7 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
         this.shapeLocationControl = shapeLocationControl;
 
         this.colorMapBackedPickerProvider = colorMapBackedPickerProvider;
+        this.index = new ColorMapBackendPickerIndex();
     }
 
     @Override
@@ -245,6 +247,12 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
         return null != m_parentPart ? m_parentPart.getShapePart() : null;
     }
 
+    @Override
+    public Index getIndex()
+    {
+        return index;
+    }
+
     public WiresShapeLocationControlImpl getShapeLocationControl()
     {
         return shapeLocationControl;
@@ -265,9 +273,9 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
         return initialParent;
     }
 
-    public interface ColorMapBackedPickerProvider
-    {
-        public ColorMapBackedPicker get(WiresLayer layer);
+    public interface ColorMapBackedPickerProvider {
+
+        ColorMapBackedPicker get(WiresLayer layer);
 
         public ColorMapBackedPicker.PickerOptions getOptions();
     }
@@ -291,6 +299,22 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
         public ColorMapBackedPicker.PickerOptions getOptions()
         {
             return pickerOptions;
+        }
+    }
+
+    private class ColorMapBackendPickerIndex implements WiresParentPickerControl.Index {
+
+
+        @Override
+        public void addShapeToSkip(final WiresContainer shape)
+        {
+            getPickerOptions().getShapesToSkip().add(shape);
+        }
+
+        @Override
+        public void clear()
+        {
+            getPickerOptions().getShapesToSkip().clear();
         }
     }
 }

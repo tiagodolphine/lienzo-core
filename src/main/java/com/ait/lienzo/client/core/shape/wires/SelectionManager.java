@@ -481,7 +481,10 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
             layer.add(getSelectionShape());
         }
         // Update location and size.
-        m_selectionShapeProvider.setLocation(location).setSize(sw, sh);
+        m_selectionShapeProvider
+                .setLocation(location)
+                .setSize(sw, sh);
+        getSelectionShape().moveToTop();
     }
 
     double relativeStartX()
