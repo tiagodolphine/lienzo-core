@@ -275,6 +275,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     }
 
     private void removeHandlers() {
+        m_handlerRegistrations.removeHandler();
         m_handlerRegistrations.clear();
     }
 }
