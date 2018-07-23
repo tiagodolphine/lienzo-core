@@ -246,7 +246,7 @@ public final class WiresManager
         registrationManager.register(shape.getGroup().addNodeMouseUpHandler(handler));
         registrationManager.register(shape.getGroup().addNodeDragEndHandler(handler));
         shape.getGroup().setDragConstraints(handler);
-        shape.setControl(handler.getControl());
+        shape.setWiresShapeControl(handler.getControl());
     }
 
     public void deregister(final WiresShape shape)
