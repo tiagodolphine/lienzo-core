@@ -16,16 +16,8 @@
 
 package com.ait.lienzo.client.core.shape.wires;
 
-import com.ait.lienzo.client.core.shape.wires.handlers.impl.WiresConnectorControlImpl;
-
 public class DefaultSelectionListener implements SelectionListener
 {
-    private final SelectionManager.SelectedItems m_selectedItems;
-
-    public DefaultSelectionListener(SelectionManager.SelectedItems selectedItems)
-    {
-        m_selectedItems = selectedItems;
-    }
 
     @Override
     public void onChanged(final SelectionManager.SelectedItems selectedItems)
@@ -66,7 +58,6 @@ public class DefaultSelectionListener implements SelectionListener
         //
         for (final WiresShape shape : changed.getRemovedShapes())
         {
-            //Console.get().info("unselected" + shape.getContainer().getUserData().toString() + " : " + shape.getGroup().getLocation());
             unselect(shape);
         }
         for (final WiresConnector connector : changed.getRemovedConnectors())
@@ -128,11 +119,11 @@ public class DefaultSelectionListener implements SelectionListener
 
     private void select(final WiresConnector connector)
     {
-        ((WiresConnectorControlImpl) connector.getWiresConnectorHandler().getControl()).showControlPoints();
+        connector.getControl().showControlPoints();
     }
 
     private void unselect(final WiresConnector connector)
     {
-        ((WiresConnectorControlImpl) connector.getWiresConnectorHandler().getControl()).hideControlPoints();
+        connector.getControl().hideControlPoints();
     }
 }

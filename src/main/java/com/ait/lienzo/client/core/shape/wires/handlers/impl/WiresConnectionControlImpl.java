@@ -19,6 +19,7 @@ package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 import com.ait.lienzo.client.core.shape.Node;
 import com.ait.lienzo.client.core.shape.Shape;
 import com.ait.lienzo.client.core.shape.wires.BackingColorMapUtils;
+import com.ait.lienzo.client.core.shape.wires.IConnectionAcceptor;
 import com.ait.lienzo.client.core.shape.wires.MagnetManager;
 import com.ait.lienzo.client.core.shape.wires.WiresConnection;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
@@ -183,13 +184,24 @@ public class WiresConnectionControlImpl implements WiresConnectionControl
                 connection.setAutoConnection(false);
             }
         }
-        return allowedMagnetAndUpdateAutoConnections(connection, m_head, shape, m_current_magnet, true);
+        boolean accept = allowedMagnetAndUpdateAutoConnections(m_manager,
+                                                               connection,
+                                                               m_head,
+                                                               shape,
+                                                               m_current_magnet,
+                                                               true);
+
+        return accept;
     }
 
-    public static boolean allowedMagnetAndUpdateAutoConnections(final WiresConnection connection, final boolean isHead, final WiresShape shape, final WiresMagnet currentMagnet, final boolean applyAccept)
-    {
-        final WiresConnector connector = connection.getConnector();
-
+    public static boolean allowedMagnetAndUpdateAutoConnections(WiresManager wiresManager,
+                                                                WiresConnection connection,
+                                                                boolean isHead,
+                                                                WiresShape shape,
+                                                                WiresMagnet currentMagnet,
+                                                                boolean applyAccept) {
+        final IConnectionAcceptor connectionAcceptor = wiresManager.getConnectionAcceptor();
+        WiresConnector connector = connection.getConnector();
         // shape can be null, to see if a connection can be unconnected to a magnet
 
         boolean accept;
@@ -197,38 +209,37 @@ public class WiresConnectionControlImpl implements WiresConnectionControl
         WiresShape headS;
 
         WiresShape tailS;
-
-        if (isHead)
-        {
-            accept = connector.getConnectionAcceptor().headConnectionAllowed(connection, shape);
-
+        if (isHead) {
+            accept = connectionAcceptor.headConnectionAllowed(connection,
+                                                                             shape);
             headS = shape;
 
             tailS = (connector.getTailConnection().getMagnet() != null) ? connector.getTailConnection().getMagnet().getMagnets().getWiresShape() : null;
-        }
-        else
-        {
-            accept = connector.getConnectionAcceptor().tailConnectionAllowed(connection, shape);
-
+        } else {
+            accept = connectionAcceptor.tailConnectionAllowed(connection,
+                                                                             shape);
             headS = (connector.getHeadConnection().getMagnet() != null) ? connector.getHeadConnection().getMagnet().getMagnets().getWiresShape() : null;
 
             tailS = shape;
         }
         if (applyAccept && accept)
         {
-            accept = accept && acceptMagnetAndUpdateAutoConnection(connection, isHead, headS, tailS, currentMagnet);
+            accept = accept && acceptMagnetAndUpdateAutoConnection(connectionAcceptor, connection, isHead, headS, tailS, currentMagnet);
 
-            if (!accept)
-            {
+            if (!accept) {
                 throw new RuntimeException("This should never happen, acceptors should not fail if the alled passed. Added for defensive programming checking");
             }
         }
         return accept;
     }
 
-    public static boolean acceptMagnetAndUpdateAutoConnection(final WiresConnection connection, final boolean isHead, final WiresShape headS, final WiresShape tailS, final WiresMagnet currentMagnet)
-    {
-        final WiresConnector connector = connection.getConnector();
+    public static boolean acceptMagnetAndUpdateAutoConnection(IConnectionAcceptor connectionAcceptor,
+                                                              WiresConnection connection,
+                                                              boolean isHead,
+                                                              WiresShape headS,
+                                                              WiresShape tailS,
+                                                              WiresMagnet currentMagnet) {
+        WiresConnector connector = connection.getConnector();
 
         boolean accept = true;
 
@@ -240,14 +251,15 @@ public class WiresConnectionControlImpl implements WiresConnectionControl
         {
             // m_current_magnet could also be null, and it's seeing if that's accepted
             // technically all connections have been checked and allowed, but for consistency and notifications will be rechecked via acceptor
-
             if (isHead)
             {
-                accept = accept && connector.getConnectionAcceptor().acceptHead(connection, currentMagnet);
+                accept = accept && connectionAcceptor.acceptHead(connection,
+                                                                                currentMagnet);
             }
             else
             {
-                accept = accept && connector.getConnectionAcceptor().acceptTail(connection, currentMagnet);
+                accept = accept && connectionAcceptor.acceptTail(connection,
+                                                                 currentMagnet);
             }
             if (accept)
             {
@@ -394,15 +406,14 @@ public class WiresConnectionControlImpl implements WiresConnectionControl
         return false;
     }
 
-    private boolean isConnectionAllowed(final WiresShape prim)
-    {
-        if (m_head)
-        {
-            return m_connector.getConnectionAcceptor().headConnectionAllowed(m_connector.getHeadConnection(), prim);
-        }
-        else
-        {
-            return m_connector.getConnectionAcceptor().tailConnectionAllowed(m_connector.getTailConnection(), prim);
+    private boolean isConnectionAllowed(WiresShape prim) {
+        final IConnectionAcceptor connectionAcceptor = m_manager.getConnectionAcceptor();
+        if (m_head) {
+            return connectionAcceptor.headConnectionAllowed(m_connector.getHeadConnection(),
+                                                                             prim);
+        } else {
+            return connectionAcceptor.tailConnectionAllowed(m_connector.getTailConnection(),
+                                                                             prim);
         }
     }
 
@@ -434,6 +445,6 @@ public class WiresConnectionControlImpl implements WiresConnectionControl
 
     private Node<?> getControlNode()
     {
-        return (Node<?>) (m_head ? m_connector.getHeadConnection().getControl() : m_connector.getTailConnection().getControl());
+        return (Node) (m_head ? m_connector.getHeadConnection().getControl() : m_connector.getTailConnection().getControl());
     }
 }

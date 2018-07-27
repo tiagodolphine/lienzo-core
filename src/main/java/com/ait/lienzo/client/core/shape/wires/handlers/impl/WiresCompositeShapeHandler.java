@@ -101,12 +101,11 @@ public class WiresCompositeShapeHandler extends WiresManager.WiresDragHandler im
 
         m_shapeControl.onMove(dx, dy);
 
-        if (m_shapeControl.onMoveComplete() && m_shapeControl.accept())
-        {
+        final boolean isComplete = m_shapeControl.onMoveComplete();
+        final boolean isAccept = isComplete && m_shapeControl.accept();
+        if (isAccept) {
             m_shapeControl.execute();
-        }
-        else
-        {
+        } else {
             reset();
         }
         m_highlight.restore();

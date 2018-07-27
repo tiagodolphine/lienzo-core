@@ -40,8 +40,6 @@ public class WiresShape extends WiresContainer
 {
     private final MultiPath             m_path;
 
-    private final MultiPath                   m_drawnObject;
-
     private final LayoutContainer             m_innerLayoutContainer;
 
     private Magnets                     m_magnets;
@@ -157,8 +155,7 @@ public class WiresShape extends WiresContainer
         }
     }
 
-    void setWiresShapeControl(final WiresShapeControl control)
-    {
+    public void setControl( final WiresShapeControl control ) {
         m_control = control;
     }
 

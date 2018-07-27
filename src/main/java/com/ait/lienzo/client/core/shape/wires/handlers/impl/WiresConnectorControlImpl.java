@@ -16,34 +16,21 @@
 
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
-import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragEndHandler;
 import com.ait.lienzo.client.core.shape.IDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.AbstractDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
-import com.ait.lienzo.client.core.shape.wires.BackingColorMapUtils;
-import com.ait.lienzo.client.core.shape.wires.IControlHandle;
-import com.ait.lienzo.client.core.shape.wires.IControlHandleList;
-import com.ait.lienzo.client.core.shape.wires.MagnetManager;
-import com.ait.lienzo.client.core.shape.wires.WiresConnector;
-import com.ait.lienzo.client.core.shape.wires.WiresManager;
+import com.ait.lienzo.client.core.shape.wires.*;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectionControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresControlPointHandler;
-import com.ait.lienzo.client.core.types.BoundingBox;
-import com.ait.lienzo.client.core.types.ImageData;
-import com.ait.lienzo.client.core.types.PathPartEntryJSO;
-import com.ait.lienzo.client.core.types.PathPartList;
 import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.client.core.types.Point2DArray;
-import com.ait.lienzo.client.core.util.ScratchPad;
 import com.ait.lienzo.client.widget.DragConstraintEnforcer;
 import com.ait.lienzo.client.widget.DragContext;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArray;
-import com.ait.tooling.nativetools.client.collection.NFastDoubleArrayJSO;
-import com.ait.tooling.nativetools.client.collection.NFastStringMap;
 import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
 
 /**
@@ -58,22 +45,16 @@ import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
  * line points must move. This differing behaviour is controlled by
  * booleans on the relevant classes.
  */
-
 public class WiresConnectorControlImpl implements WiresConnectorControl
 {
-    public static final int            MINIMUM_STROKE_WITH = 4;
+    private final WiresConnector m_connector;
+    private final WiresManager m_wiresManager;
 
-    private final WiresConnector       m_connector;
-
+    private NFastDoubleArray m_startPointHandles;
     private HandlerRegistrationManager m_HandlerRegistrationManager;
-
-    private final WiresManager         m_wiresManager;
-
-    private NFastDoubleArray           m_startPoints;
-
-    private WiresConnectionControl     m_headConnectionControl;
-
-    private WiresConnectionControl     m_tailConnectionControl;
+    private Point2DArray m_startLinePoints;
+    private WiresConnectionControl m_headConnectionControl;
+    private WiresConnectionControl m_tailConnectionControl;
 
     public WiresConnectorControlImpl(final WiresConnector connector, final WiresManager wiresManager)
     {
@@ -87,7 +68,7 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
     {
         final IControlHandleList handles = m_connector.getPointHandles();
 
-        m_startPoints = new NFastDoubleArray();
+        m_startPointHandles = new NFastDoubleArray();
 
         for (int i = 0; i < handles.size(); i++)
         {
@@ -95,30 +76,18 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
 
             final IPrimitive<?> prim = h.getControl();
 
-            m_startPoints.push(prim.getX());
+            m_startPointHandles.push(prim.getX());
 
-            m_startPoints.push(prim.getY());
+            m_startPointHandles.push(prim.getY());
         }
     }
 
     @Override
     public boolean onMove(final double dx, final double dy)
     {
-        move(dx, dy, false, false);
+        move(dx, dy);
 
         return false;
-    }
-
-    @Override
-    public boolean onMoveComplete()
-    {
-        m_connector.getGroup().setX(0).setY(0);
-
-        m_wiresManager.getLayer().getLayer().batch();
-
-        dragEnd();
-
-        return true;
     }
 
     @Override
@@ -127,27 +96,17 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
         return new Point2D(0, 0);
     }
 
-    public void dragEnd()
-    {
-        m_startPoints = null;
-    }
+    private void move(double dx,
+                     double dy) {
+        final boolean isConnected = isConnected(m_connector.getHeadConnection()) || isConnected(m_connector.getTailConnection());
 
-    /**
-     * See class javadocs to explain why we have these booleans
-     */
-    @Override
-    public void move(final double dx, final double dy, final boolean midPointsOnly, final boolean moveLinePoints)
-    {
-        final IControlHandleList handles = m_connector.getPointHandles();
+        IControlHandleList handles = m_connector.getPointHandles();
 
         int start = 0;
 
         int end = handles.size();
-
-        if (midPointsOnly)
-        {
-            if (m_connector.getHeadConnection().getMagnet() != null)
-            {
+        if (isConnected) {
+            if (m_connector.getHeadConnection().getMagnet() != null) {
                 start++;
             }
             if (m_connector.getTailConnection().getMagnet() != null)
@@ -157,50 +116,59 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
         }
         final Point2DArray points = m_connector.getLine().getPoint2DArray();
 
-        for (int i = start, j = (start == 0) ? start : 2; i < end; i++, j += 2)
-        {
-            if (moveLinePoints)
-            {
-                final Point2D p = points.get(i);
-
-                p.setX(m_startPoints.get(j) + dx);
-
-                p.setY(m_startPoints.get(j + 1) + dy);
+        for (int i = start, j = (start == 0) ? start : 2; i < end; i++, j += 2) {
+            if (isConnected) {
+                Point2D p = points.get(i);
+                p.setX(m_startPointHandles.get(j) + dx);
+                p.setY(m_startPointHandles.get(j + 1) + dy);
             }
-            final IControlHandle h = handles.getHandle(i);
 
-            final IPrimitive<?> prim = h.getControl();
-
-            prim.setX(m_startPoints.get(j) + dx);
-
-            prim.setY(m_startPoints.get(j + 1) + dy);
+            IControlHandle h = handles.getHandle(i);
+            IPrimitive<?> prim = h.getControl();
+            prim.setX(m_startPointHandles.get(j) + dx);
+            prim.setY(m_startPointHandles.get(j + 1) + dy);
         }
-        if (moveLinePoints)
-        {
+
+        if (isConnected) {
             m_connector.getLine().refresh();
         }
-        m_wiresManager.getLayer().getLayer().batch();
+
+        WiresConnector.updateHeadTailForRefreshedConnector(m_connector);
+
+        batch();
     }
 
-    /*
-     ***************** CONTROL POINTS **********************************
-     */
+    @Override
+    public boolean onMoveComplete() {
+        m_connector.getGroup().setX(0).setY(0);
+        batch();
+        return true;
+    }
 
     @Override
-    public void reset()
+    public void execute()
     {
-        if (null != m_startPoints)
-        {
+        WiresConnector.updateHeadTailForRefreshedConnector(m_connector);
+        getControlPointsAcceptor().move(m_connector,
+                                        m_connector.getControlPoints().copy());
+    }
+
+    @Override
+    public void clear()
+    {
+        hideControlPoints();
+        m_startPointHandles = null;
+        m_startLinePoints = null;
+    }
+
+    @Override
+    public void reset() {
+        boolean done = false;
+        if (null != m_startPointHandles) {
             final IControlHandleList handles = m_connector.getPointHandles();
-
-            final Point2DArray points = m_connector.getLine().getPoint2DArray();
-
-            for (int i = 0, j = 0; i < handles.size(); i++, j += 2)
-            {
-                final double px = m_startPoints.get(j);
-
-                final double py = m_startPoints.get(j + 1);
-
+            for (int i = 0, j = 0; i < handles.size(); i++, j += 2) {
+                final double px = m_startPointHandles.get(j);
+                final double py = m_startPointHandles.get(j + 1);
                 final IControlHandle h = handles.getHandle(i);
 
                 final IPrimitive<?> prim = h.getControl();
@@ -208,143 +176,70 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
                 prim.setX(px);
 
                 prim.setY(py);
+            }
+            done = true;
+        }
 
+        if (null != m_startLinePoints) {
+            Point2DArray points = m_connector.getLine().getPoint2DArray();
+            for (int i = 0; i < points.size(); i++)
+            {
                 final Point2D point = points.get(i);
-
-                point.setX(px);
-
-                point.setY(py);
+                final Point2D startPoint = m_startLinePoints.get(i);
+                point.setX(startPoint.getX());
+                point.setY(startPoint.getY());
             }
+            done = true;
         }
-        m_connector.getLine().refresh();
 
-        m_wiresManager.getLayer().getLayer().batch();
+        if (done) {
+            m_connector.getLine().refresh();
+            batch();
+        }
+
+        m_startPointHandles = null;
+        m_startLinePoints = null;
     }
 
     @Override
-    public int addControlPoint(final double x, final double y)
-    {
-        hideControlPoints();
+    public int addControlPoint(final double x,
+                                final double y) {
 
-        final Point2DArray oldPoints = m_connector.getLine().getPoint2DArray();
-
-        final int pointIndex = getIndexForSelectedSegment(m_connector, (int) x, (int) y, oldPoints);
-
-        if (pointIndex > 0)
+        final int index = m_connector.getControlPointIndex(x, y);
+        if (index < 0)
         {
-            final Point2D point = new Point2D(x, y);
-
-            final Point2DArray newPoints = new Point2DArray();
-
-            newPoints.push(oldPoints.get(0));
-
-            for (int i = 1; i < pointIndex; i++)
+            final int pointIndex = m_connector.getIndexForSelectedSegment((int) x,
+                                                                          (int) y);
+            if (pointIndex > -1 && addControlPoint(x, y, pointIndex))
             {
-                newPoints.push(oldPoints.get(i));
+                refreshControlPoints();
             }
-            newPoints.push(point);
-
-            for (int i = pointIndex; i < oldPoints.size(); i++)
-            {
-                newPoints.push(oldPoints.get(i));
-            }
-            m_connector.getLine().setPoint2DArray(newPoints);
+            return pointIndex;
         }
-        showPointHandles();
+        return index;
+    }
 
-        m_connector.getLine().getLayer().batch();
-        return pointIndex;
+    public boolean addControlPoint(final double x,
+                                      final double y,
+                                      final int index) {
+        if (getControlPointsAcceptor().add(m_connector, index, new Point2D(x, y))) {
+            m_connector.addControlPoint(x, y, index);
+            return true;
+        }
+        return false;
     }
 
     @Override
-    public void addControlPointToLine(final double x, final double y, final int index)
-    {
-
-        final Point2DArray oldPoints = m_connector.getLine().getPoint2DArray();
-        if ((index <= 0) || (index >= oldPoints.size()))
-        {
-            throw new IllegalArgumentException("Index should be between head and tail line points. Index: " + index);
-        }
-
-        final Point2DArray newPoints = new Point2DArray();
-
-        for (int i = 0; i < oldPoints.size(); i++)
-        {
-            if (i == index)
-            {
-                newPoints.push(new Point2D(x, y));
-            }
-            newPoints.push(oldPoints.get(i));
-        }
-
-        m_connector.getLine().setPoint2DArray(newPoints);
-        addControlPoint(x, y);
-        m_connector.select();
-    }
-
-    @Override
-    public void removeControlPoint(final double x, final double y)
-    {
-        final Point2DArray points = m_connector.getLine().getPoint2DArray();
-        final Point2DArray newPoints = new Point2DArray();
-        for (final Point2D point : points)
-        {
-            if ((point.getX() == x) && (point.getY() == y))
-            {
-                continue;
-            }
-            newPoints.push(point);
-        }
-        m_connector.getLine().setPoint2DArray(newPoints);
-        m_connector.select();
-    }
-
-    @Override
-    public void destroyControlPoint(final IPrimitive<?> control)
-    {
+    public void destroyControlPoint(final int index) {
         // Connection (line) need at least 2 points to be drawn
-
-        if (m_connector.getPointHandles().size() <= 2)
-        {
-            m_wiresManager.deregister(m_connector);
-
+        if (m_connector.getPointHandles().size() <= 2) {
             return;
         }
-        IControlHandle selected = null;
-
-        for (final IControlHandle handle : m_connector.getPointHandles())
-        {
-            if (handle.getControl() == control)
-            {
-                selected = handle;
-
-                break;
-            }
+        if (getControlPointsAcceptor().delete(m_connector,
+                                              index)) {
+            m_connector.destroyControlPoints(new int[] { index });
         }
-        if (null == selected)
-        {
-            return;
-        }
-        final Point2DArray oldPoints = m_connector.getLine().getPoint2DArray();
-
-        final Point2DArray newPoints = new Point2DArray();
-
-        final Point2D selectedPoint2D = selected.getControl().getLocation();
-
-        for (int i = 0; i < oldPoints.size(); i++)
-        {
-            final Point2D current = oldPoints.get(i);
-
-            if (!current.equals(selectedPoint2D))
-            {
-                newPoints.push(current);
-            }
-        }
-        m_connector.getLine().setPoint2DArray(newPoints);
-
-        destroyPointHandles();
-
-        showPointHandles();
+        refreshControlPoints();
     }
 
     @Override
@@ -354,18 +249,37 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
     }
 
     @Override
-    public void hideControlPoints()
-    {
-        if (m_HandlerRegistrationManager != null)
-        {
-            destroyPointHandles();
-        }
+    public void hideControlPoints() {
+        destroyPointHandles();
     }
 
     @Override
-    public Point2D adjustControlPointAt(final double x, final double y, final double deltaX, final double deltaY)
+    public boolean areControlPointsVisible()
     {
-        return m_connector.getLine().adjustPoint(x, y, deltaX, deltaY);
+        return null != m_connector.getPointHandles() && m_connector.getPointHandles().isVisible();
+    }
+
+    @Override
+    public boolean moveControlPoint(final int index,
+                                           final Point2D location)
+    {
+        final Point2DArray controlPoints = m_connector.getControlPoints();
+        // Notice that control points [0] and [controlPoints.size - 1] are being used for the connections as well,
+        // so they're being updated anyway on other event handlers - it must return "true" in that case.
+        if (index > 0 && index < (controlPoints.size() -1)) {
+            final double tx = location.getX();
+            final double ty = location.getY();
+            final boolean accept = getControlPointsAcceptor().move(m_connector,
+                                                                   controlPoints
+                                                                              .copy()
+                                                                              .set(index, location));
+            // Check rollback
+            if (accept) {
+                m_connector.moveControlPoint(index, new Point2D(tx, ty));
+            }
+            return accept;
+        }
+        return true;
     }
 
     @Override
@@ -380,218 +294,39 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
         return m_tailConnectionControl;
     }
 
-    public HandlerRegistrationManager getHandlerRegistrationManager()
-    {
-        return m_HandlerRegistrationManager;
-    }
+    public void showPointHandles() {
+        if (m_HandlerRegistrationManager == null) {
 
-    public static int getIndexForSelectedSegment(final WiresConnector connector, final int mouseX, final int mouseY, final Point2DArray oldPoints)
-    {
-        final NFastStringMap<Integer> colorMap = new NFastStringMap<>();
-
-        final IDirectionalMultiPointShape<?> line = connector.getLine();
-
-        final ScratchPad scratch = line.getScratchPad();
-        scratch.clear();
-        final PathPartList path = line.asShape().getPathPartList();
-        int pointsIndex = 1;
-
-        String color = MagnetManager.m_c_rotor.next();
-
-        colorMap.put(color, pointsIndex);
-        final Context2D ctx = scratch.getContext();
-        final double strokeWidth = line.asShape().getStrokeWidth();
-        //setting a minimum stroke width to make finding a close point to the connector easier
-        ctx.setStrokeWidth((strokeWidth < MINIMUM_STROKE_WITH ? MINIMUM_STROKE_WITH : strokeWidth));
-
-        final Point2D absolutePos = connector.getLine().getComputedLocation();
-
-        final double offsetX = absolutePos.getX();
-
-        final double offsetY = absolutePos.getY();
-
-        Point2D pathStart = new Point2D(offsetX, offsetY);
-
-        Point2D segmentStart = pathStart;
-
-        for (int i = 0; i < path.size(); i++)
-        {
-            final PathPartEntryJSO entry = path.get(i);
-
-            NFastDoubleArrayJSO points = entry.getPoints();
-
-            switch (entry.getCommand())
-            {
-                case PathPartEntryJSO.MOVETO_ABSOLUTE:
-                {
-                    final double x0 = points.get(0) + offsetX;
-
-                    final double y0 = points.get(1) + offsetY;
-
-                    final Point2D m = new Point2D(x0, y0);
-
-                    if (i == 0)
-                    {
-                        // this is position is needed, if we close the path.
-
-                        pathStart = m;
-                    }
-                    segmentStart = m;
-                    break;
-                }
-                case PathPartEntryJSO.LINETO_ABSOLUTE:
-                {
-                    points = entry.getPoints();
-
-                    final double x0 = points.get(0) + offsetX;
-
-                    final double y0 = points.get(1) + offsetY;
-
-                    final Point2D end = new Point2D(x0, y0);
-
-                    if (oldPoints.get(pointsIndex).equals(segmentStart))
-                    {
-                        pointsIndex++;
-
-                        color = MagnetManager.m_c_rotor.next();
-
-                        colorMap.put(color, pointsIndex);
-                    }
-                    ctx.setStrokeColor(color);
-
-                    ctx.beginPath();
-
-                    ctx.moveTo(segmentStart.getX(), segmentStart.getY());
-
-                    ctx.lineTo(x0, y0);
-
-                    ctx.stroke();
-
-                    segmentStart = end;
-                    break;
-                }
-                case PathPartEntryJSO.CLOSE_PATH_PART:
-                {
-                    final double x0 = pathStart.getX() + offsetX;
-
-                    final double y0 = pathStart.getY() + offsetY;
-
-                    final Point2D end = new Point2D(x0, y0);
-
-                    if (oldPoints.get(pointsIndex).equals(segmentStart))
-                    {
-                        pointsIndex++;
-
-                        color = MagnetManager.m_c_rotor.next();
-
-                        colorMap.put(color, pointsIndex);
-                    }
-                    ctx.setStrokeColor(color);
-
-                    ctx.beginPath();
-
-                    ctx.moveTo(segmentStart.getX(), segmentStart.getY());
-
-                    ctx.lineTo(x0, y0);
-
-                    ctx.stroke();
-
-                    segmentStart = end;
-                    break;
-                }
-                case PathPartEntryJSO.CANVAS_ARCTO_ABSOLUTE:
-                {
-                    points = entry.getPoints();
-
-                    final double x0 = points.get(0) + offsetX;
-
-                    final double y0 = points.get(1) + offsetY;
-
-                    final Point2D p0 = new Point2D(x0, y0);
-
-                    final double x1 = points.get(2) + offsetX;
-
-                    final double y1 = points.get(3) + offsetY;
-
-                    final double r = points.get(4);
-
-                    final Point2D p1 = new Point2D(x1, y1);
-
-                    final Point2D end = p1;
-
-                    if (p0.equals(oldPoints.get(pointsIndex)))
-                    {
-                        pointsIndex++;
-
-                        color = MagnetManager.m_c_rotor.next();
-
-                        colorMap.put(color, pointsIndex);
-                    }
-                    ctx.setStrokeColor(color);
-
-                    ctx.beginPath();
-
-                    ctx.moveTo(segmentStart.getX(), segmentStart.getY());
-
-                    ctx.arcTo(x0, y0, x1, y1, r);
-
-                    ctx.stroke();
-
-                    segmentStart = end;
-                    break;
-                }
-            }
-        }
-        final BoundingBox box = connector.getLine().getBoundingBox();
-
-        // Keep the ImageData small by clipping just the visible line area
-        // But remember the mouse must be offset for this clipped area.
-
-        final int sx = (int) (box.getX() - strokeWidth - offsetX);
-
-        final int sy = (int) (box.getY() - strokeWidth - offsetY);
-
-        final ImageData backing = ctx.getImageData(sx, sy, (int) (box.getWidth() + strokeWidth + strokeWidth), (int) (box.getHeight() + strokeWidth + strokeWidth));
-
-        color = BackingColorMapUtils.findColorAtPoint(backing, mouseX - sx, mouseY - sy);
-
-        return null != color ? colorMap.get(color) : -1;
-    }
-
-    public void showPointHandles()
-    {
-        if (m_HandlerRegistrationManager == null)
-        {
             m_HandlerRegistrationManager = m_connector.getPointHandles().getHandlerRegistrationManager();
 
             m_connector.getPointHandles().show();
 
-            m_headConnectionControl = m_wiresManager.getControlFactory().newConnectionControl(m_connector, true, m_wiresManager);
-
-            final ConnectionHandler headConnectionHandler = new ConnectionHandler(m_headConnectionControl);
-
-            final Shape<?> head = m_connector.getHeadConnection().getControl().asShape();
-
+            m_headConnectionControl = m_wiresManager.getControlFactory()
+                                                    .newConnectionControl(m_connector,
+                                                                          true,
+                                                                          m_wiresManager);
+            ConnectionHandler headConnectionHandler = new ConnectionHandler(m_headConnectionControl);
+            Shape<?> head = m_connector.getHeadConnection().getControl().asShape();
             head.setDragConstraints(headConnectionHandler);
 
             m_HandlerRegistrationManager.register(head.addNodeDragEndHandler(headConnectionHandler));
 
-            m_tailConnectionControl = m_wiresManager.getControlFactory().newConnectionControl(m_connector, false, m_wiresManager);
-
-            final ConnectionHandler tailConnectionHandler = new ConnectionHandler(m_tailConnectionControl);
-
-            final Shape<?> tail = m_connector.getTailConnection().getControl().asShape();
-
+            m_tailConnectionControl = m_wiresManager.getControlFactory()
+                                                    .newConnectionControl(m_connector,
+                                                                          false,
+                                                                          m_wiresManager);
+            ConnectionHandler tailConnectionHandler = new ConnectionHandler(m_tailConnectionControl);
+            Shape<?> tail = m_connector.getTailConnection().getControl().asShape();
             tail.setDragConstraints(tailConnectionHandler);
 
             m_HandlerRegistrationManager.register(tail.addNodeDragEndHandler(tailConnectionHandler));
 
-            final WiresControlPointHandler controlPointsHandler = m_wiresManager.getWiresHandlerFactory().newControlPointHandler(m_connector, this);
+            final WiresControlPointHandler controlPointsHandler =
+                    m_wiresManager.getWiresHandlerFactory().newControlPointHandler(m_connector, m_wiresManager);
 
-            for (final IControlHandle handle : m_connector.getPointHandles())
-            {
+            for (IControlHandle handle : m_connector.getPointHandles()) {
                 final Shape<?> shape = handle.getControl().asShape();
-
+                m_HandlerRegistrationManager.register(shape.addNodeMouseClickHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeMouseDoubleClickHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeDragStartHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeDragEndHandler(controlPointsHandler));
@@ -600,16 +335,13 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
         }
     }
 
-    private void destroyPointHandles()
-    {
-        m_HandlerRegistrationManager.destroy();
-
-        m_HandlerRegistrationManager = null;
-
-        m_headConnectionControl = null;
-
-        m_tailConnectionControl = null;
-
+    private void destroyPointHandles() {
+        if (null != m_HandlerRegistrationManager) {
+            m_HandlerRegistrationManager.destroy();
+            m_HandlerRegistrationManager = null;
+            m_headConnectionControl = null;
+            m_tailConnectionControl = null;
+        }
         m_connector.destroyPointHandles();
     }
 
@@ -661,5 +393,25 @@ public class WiresConnectorControlImpl implements WiresConnectorControl
                 event.getDragContext().reset();
             }
         }
+    }
+
+    private void refreshControlPoints() {
+        hideControlPoints();
+        showPointHandles();
+        batch();
+    }
+
+    private void batch() {
+        if (null != m_wiresManager.getLayer().getLayer()) {
+            m_wiresManager.getLayer().getLayer().batch();
+        }
+    }
+
+    private IControlPointsAcceptor getControlPointsAcceptor() {
+        return m_wiresManager.getControlPointsAcceptor();
+    }
+
+    private static boolean isConnected(final WiresConnection connection) {
+        return null != connection && null != connection.getMagnet();
     }
 }

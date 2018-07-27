@@ -16,9 +16,9 @@
 
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import com.ait.lienzo.client.core.shape.IDirectionalMultiPointShape;
 import com.ait.lienzo.client.core.shape.MultiPath;
@@ -29,7 +29,6 @@ import com.ait.lienzo.client.core.shape.wires.WiresContainer;
 import com.ait.lienzo.client.core.shape.wires.WiresMagnet;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.WiresShape;
-import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorHandler;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.PathPartList;
 import com.ait.lienzo.client.core.types.Point2D;
@@ -77,14 +76,20 @@ public class ShapeControlUtils
         }
     }
 
+    public static boolean isConnected(final WiresConnection connection) {
+        return  null != connection && null != connection.getMagnet();
+    }
+
+    public static boolean isConnected(final WiresConnector connector) {
+        return isConnected(connector.getHeadConnection()) && isConnected(connector.getTailConnection());
+    }
+
     /**
-     * Get all child {@link WiresConnector} from a given parent shape that are located inside the parent
-     * {@link BoundingBox}.
-     *
-     * @param shape parent shape
-     * @return Map of connectors by uuid
+     * Looks for all child {@link WiresConnector} inside for a given shape and children,
+     * and returns the ones that can be updated as within the shape is also updated, by checking
+     * if both source/target shapes are in same parent.
      */
-    public static Map<String, WiresConnector> getChildConnectorWithinShape(WiresShape shape) {
+    public static Map<String, WiresConnector> lookupChildrenConnectorsToUpdate(WiresShape shape) {
         final Map<String, WiresConnector> connectors = new HashMap<>();
         if (shape.getMagnets() != null) {
             // start with 0, as we can have center connections too
@@ -92,48 +97,34 @@ public class ShapeControlUtils
                 WiresMagnet m = shape.getMagnets().getMagnet(i);
                 for (int j = 0, size1 = m.getConnectionsSize(); j < size1; j++) {
                     final WiresConnection connection = m.getConnections().get(j);
-                    final WiresContainer parent = shape.getParent();
-                    if (parent != null && parent.getGroup() != null) {
-                        final BoundingBox boundingBox = parent.getGroup().getBoundingBox();
-                        final WiresConnector connector = connection.getConnector();
-                        final Point2D head = connector.getHead().getLocation();
-                        final Point2D tail = connector.getTail().getLocation();
-                        final Point2D parentX = new Point2D(boundingBox.getX() + parent.getX(), boundingBox.getY() + parent.getY());
-                        final Point2D parentY = new Point2D(boundingBox.getMaxX() + parent.getX(), boundingBox.getMaxY() + parent.getY());
-
-                        //check if the connector head and tail are inside the parent bounding box
-                        if (Geometry.intersectPointWithinBounding(head, parentX, parentY) &&
-                                Geometry.intersectPointWithinBounding(tail, parentX, parentY)) {
-                            connectors.put(connector.getGroup().uuid(), connector);
+                    final WiresConnector connector = connection.getConnector();
+                    if (isConnected(connector)) {
+                        final WiresShape oppositeShape =
+                                connection.getOppositeConnection().getMagnet().getMagnets().getWiresShape();
+                        if (isSameParent(shape, oppositeShape)) {
+                            connectors.put(connector.uuid(), connector);
                         }
                     }
+
                 }
             }
         }
 
-        if (shape.getChildShapes() == null) {
-            return connectors;
+        if (shape.getChildShapes() != null) {
+            for (WiresShape child : shape.getChildShapes()) {
+                //recursive call to children
+                connectors.putAll(lookupChildrenConnectorsToUpdate(child));
+            }
         }
 
-        for (WiresShape child : shape.getChildShapes()) {
-            //recursive call to children
-            connectors.putAll(getChildConnectorWithinShape(child));
-        }
         return connectors;
     }
 
-    public static void updateConnectors(Collection<WiresConnector> connectors, double dx, double dy) {
-        if (connectors != null && !connectors.isEmpty()) {
-            // Update m_connectors and connections.
-            for (WiresConnector connector : connectors) {
-                WiresConnectorHandler handler = connector.getWiresConnectorHandler();
-                handler.getControl().move(dx,
-                                          dy,
-                                          true,
-                                          true);
-                WiresConnector.updateHeadTailForRefreshedConnector(connector);
-            }
-        }
+    private static boolean isSameParent(final WiresShape s1,
+                                        final WiresShape s2) {
+        final WiresContainer parent1 = s1.getParent();
+        final WiresContainer parent2 = s2.getParent();
+        return Objects.equals(parent1, parent2);
     }
 
     public static void updateNestedShapes(final WiresShape shape) {
@@ -201,7 +192,8 @@ public class ShapeControlUtils
                         throw new RuntimeException("Defensive programming: should not be possible if there is a single intersection.");
                     }
                 }
-                c.getWiresConnectorHandler().getControl().hideControlPoints();
+
+                c.getControl().hideControlPoints();
 
                 final Point2DArray oldPoints = c.getLine().getPoint2DArray();
 
@@ -216,10 +208,11 @@ public class ShapeControlUtils
                     final double y = p.getY() + absLoc.getY();
 
                     // get first and last segment, this can happen if shape straddles multiple segments of the line
-                    final int pointIndex = WiresConnectorControlImpl.getIndexForSelectedSegment(c, (int) x, (int) y, oldPoints);
-
-                    if (pointIndex < firstSegmentIndex)
-                    {
+                    int pointIndex = WiresConnector.getIndexForSelectedSegment(c,
+                                                                                          (int) x,
+                                                                                          (int) y,
+                                                                                          oldPoints);
+                    if (pointIndex < firstSegmentIndex) {
                         firstSegmentIndex = pointIndex;
                     }
                     if (pointIndex > lastSegmentIndex)
@@ -267,10 +260,18 @@ public class ShapeControlUtils
                     final WiresMagnet cmagnet = shape.getMagnets().getMagnet(1);
 
                     // check if isAllowed
-                    WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(headCon, true, shape, cmagnet, false);
-
-                    accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(tailCon, false, shape, cmagnet, false);
-
+                    WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(wiresManager,
+                                                                                     headCon,
+                                                                                     true,
+                                                                                     shape,
+                                                                                     cmagnet,
+                                                                                     false);
+                    accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(wiresManager,
+                                                                                                        tailCon,
+                                                                                                        false,
+                                                                                                        shape,
+                                                                                                        cmagnet,
+                                                                                                        false);
                     if (!accept)
                     {
                         return accept;
@@ -314,11 +315,13 @@ public class ShapeControlUtils
                         tailCon2.setYOffset(tailCon.getYOffset());
 
                         tailCon2.setPoint(tailCon.getPoint());
-
-                        accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(headCon2, true, shape, cmagnet, true);
-
-                        if (!accept)
-                        {
+                        accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(wiresManager,
+                                                                                                            headCon2,
+                                                                                                            true,
+                                                                                                            shape,
+                                                                                                            cmagnet,
+                                                                                                            true);
+                        if (!accept) {
                             // we already checked isAllowed before mutation, so this in theory should not be needed. Adding for future proofing and completeness - in
                             // case a future version doesn't require identical behavioural logic for allowed and accept.
                             tailCon2.setMagnet(null);
@@ -342,11 +345,13 @@ public class ShapeControlUtils
                     tailCon.setPoint(endPoint);
 
                     c.getLine().setPoint2DArray(newPoints1);
-
-                    accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(tailCon, false, shape, cmagnet, true);
-
-                    if (!accept)
-                    {
+                    accept = accept && WiresConnectionControlImpl.allowedMagnetAndUpdateAutoConnections(wiresManager,
+                                                                                                        tailCon,
+                                                                                                        false,
+                                                                                                        shape,
+                                                                                                        cmagnet,
+                                                                                                        true);
+                    if (!accept) {
                         // we already checked isAllowed before mutation, so this in theory should not be needed. Adding for future proofing and completeness - in
                         // case a future version doesn't require identical behavioural logic for allowed and accept.
                         if (c2 != null)

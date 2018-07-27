@@ -151,7 +151,7 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
         onEventHandlers.setOnMouseUpEventHandle(onMouseXEventHandler);
         onEventHandlers.setOnMouseMoveEventHandle(onMouseXEventHandler);
 
-        m_selectionListener = new DefaultSelectionListener(m_selected);
+        m_selectionListener = new DefaultSelectionListener();
 
         m_shapeControl = wiresManager.getControlFactory().newCompositeControl(new WiresCompositeControl.Context()
         {
@@ -365,7 +365,7 @@ public class SelectionManager implements NodeMouseDoubleClickHandler, NodeMouseC
         drawSelectionShapeForSelection();
     }
 
-    private void drawSelectionShapeForSelection()
+    public void drawSelectionShapeForSelection()
     {
         if (m_selected.isEmpty())
         {
