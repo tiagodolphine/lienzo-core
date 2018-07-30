@@ -71,6 +71,8 @@ public final class WiresManager
 
     private IContainmentAcceptor                             m_containmentAcceptor = IContainmentAcceptor.ALL;
 
+    private IControlPointsAcceptor                           m_controlPointsAcceptor = IControlPointsAcceptor.ALL;
+
     private IDockingAcceptor                                 m_dockingAcceptor     = IDockingAcceptor.NONE;
 
     private SelectionManager                                 m_selectionManager;
@@ -180,14 +182,17 @@ public final class WiresManager
         return register(shape, true);
     }
 
-    public WiresShapeControl register(final WiresShape shape, final boolean addIntoIndex)
+    public WiresShapeControl register(final WiresShape shape,
+                                      final boolean addIntoIndex)
     {
         shape.setWiresManager(this);
 
+        final WiresShapeControl control = getControlFactory().newShapeControl(shape, this);
+        shape.setControl(control);
+
         final WiresShapeHandler handler =
                 getWiresHandlerFactory()
-                        .newShapeHandler(getControlFactory()
-                                                 .newShapeControl(shape, this),
+                        .newShapeHandler(shape,
                                          getControlFactory().newShapeHighlight(this),
                                          this);
 
@@ -246,7 +251,7 @@ public final class WiresManager
         registrationManager.register(shape.getGroup().addNodeMouseUpHandler(handler));
         registrationManager.register(shape.getGroup().addNodeDragEndHandler(handler));
         shape.getGroup().setDragConstraints(handler);
-        shape.setWiresShapeControl(handler.getControl());
+        shape.setControl(handler.getControl());
     }
 
     public void deregister(final WiresShape shape)
@@ -261,15 +266,24 @@ public final class WiresManager
 
     public WiresConnectorControl register(final WiresConnector connector)
     {
-        connector.setConnectionAcceptor(m_connectionAcceptor);
-
         final String uuid = connector.uuid();
 
         final HandlerRegistrationManager m_registrationManager = createHandlerRegistrationManager();
 
+        final WiresConnectorControl control = getControlFactory().newConnectorControl(connector,
+                                                                                              this);
+
+        connector.setControl(control);
+
         final WiresConnectorHandler handler = getWiresHandlerFactory().newConnectorHandler(connector, this);
 
-        connector.setWiresConnectorHandler( m_registrationManager, handler );
+        m_registrationManager.register(connector.getGroup().addNodeDragStartHandler(handler));
+        m_registrationManager.register(connector.getGroup().addNodeDragMoveHandler(handler));
+        m_registrationManager.register(connector.getGroup().addNodeDragEndHandler(handler));
+        m_registrationManager.register(connector.getLine().addNodeMouseClickHandler(handler));
+        m_registrationManager.register(connector.getLine().addNodeMouseDoubleClickHandler(handler));
+        m_registrationManager.register(connector.getHead().addNodeMouseClickHandler(handler));
+        m_registrationManager.register(connector.getTail().addNodeMouseClickHandler(handler));
 
         getConnectorList().add(connector);
         m_shapeHandlersMap.put(uuid, m_registrationManager);
@@ -324,6 +338,7 @@ public final class WiresManager
         m_locationAcceptor = null;
         m_connectionAcceptor = null;
         m_containmentAcceptor = null;
+        m_controlPointsAcceptor = null;
         m_dockingAcceptor = null;
     }
 
@@ -379,9 +394,9 @@ public final class WiresManager
         return m_connectionAcceptor;
     }
 
-    public void setConnectionAcceptor(IConnectionAcceptor connectionAcceptor)
+    public IControlPointsAcceptor getControlPointsAcceptor()
     {
-        m_connectionAcceptor = connectionAcceptor;
+        return m_controlPointsAcceptor;
     }
 
     public IContainmentAcceptor getContainmentAcceptor()
@@ -391,6 +406,20 @@ public final class WiresManager
 
     public IDockingAcceptor getDockingAcceptor() {
         return m_dockingAcceptor;
+    }
+
+    public void setConnectionAcceptor(IConnectionAcceptor connectionAcceptor)
+    {
+        m_connectionAcceptor = connectionAcceptor;
+    }
+
+    public void setControlPointsAcceptor(IControlPointsAcceptor controlPointsAcceptor)
+    {
+        if (controlPointsAcceptor == null)
+        {
+            throw new IllegalArgumentException("ControlPointsAcceptor cannot be null");
+        }
+        this.m_controlPointsAcceptor = controlPointsAcceptor;
     }
 
     public void setContainmentAcceptor(IContainmentAcceptor containmentAcceptor)

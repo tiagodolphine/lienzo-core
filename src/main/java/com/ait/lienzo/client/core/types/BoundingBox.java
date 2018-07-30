@@ -28,7 +28,7 @@ public final class BoundingBox
 
     public BoundingBox()
     {
-        this(Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE);
+        this(BoundingBoxJSO.make(Double.MAX_VALUE, Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE));
     }
 
     public BoundingBox(final BoundingBox bbox)
@@ -40,7 +40,7 @@ public final class BoundingBox
 
     public BoundingBox(final double minx, final double miny, final double maxx, final double maxy)
     {
-        this(BoundingBoxJSO.make(minx, miny, maxx, maxy));
+        this(new Point2D(minx, miny), new Point2D(maxx, maxy));
     }
 
     public BoundingBox(final Point2D point, final Point2D... points)
@@ -202,12 +202,12 @@ public final class BoundingBox
 
     public final double getMinX()
     {
-        return getX();
+        return m_jso.getMinX();
     }
 
     public final double getMaxX()
     {
-        return  getX() + getWidth();
+        return m_jso.getMaxX();
     }
 
     public final double getMinY()
@@ -217,7 +217,7 @@ public final class BoundingBox
 
     public final double getMaxY()
     {
-        return getY() + getHeight();
+        return m_jso.getMaxY();
     }
 
     public final boolean intersects(BoundingBox other)

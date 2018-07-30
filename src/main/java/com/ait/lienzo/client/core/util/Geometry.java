@@ -36,6 +36,7 @@ import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.core.types.Transform;
 import com.ait.lienzo.shared.core.types.Direction;
 import com.ait.tooling.nativetools.client.collection.NFastArrayList;
+import com.ait.tooling.nativetools.client.collection.NFastDoubleArray;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArrayJSO;
 
 /**
@@ -72,33 +73,24 @@ public final class Geometry
     {
     }
 
-    public static final boolean closeEnough(final double a, final double b, final double slop)
+    public static boolean closeEnough(final double a, final double b, final double slop)
     {
         return (Math.abs(a - b) < slop);
     }
 
-    public static final boolean closeEnough(final double a, final double b)
+    public static boolean closeEnough(final double a, final double b)
     {
         return (Math.abs(a - b) < NRRF_PRECISION);
     }
 
-    private static boolean greaterOrCloseEnough(final double a, final double b)
+    protected static boolean greaterOrCloseEnough(final double a, final double b)
     {
         return closeEnough(a, b) || (a > b);
     }
 
-    private static boolean lesserOrCloseEnough(final double a, final double b)
+    protected static boolean lesserOrCloseEnough(final double a, final double b)
     {
         return closeEnough(a, b) || (a < b);
-    }
-
-    public static final BoundingBox getBoundingBox(final QuadraticCurve curve)
-    {
-        if (curve == null)
-        {
-            return null;
-        }
-        return getBoundingBoxOfCurve(curve.getControlPoints());
     }
 
     public static final BoundingBox getBoundingBox(final BezierCurve curve)
@@ -516,34 +508,39 @@ public final class Geometry
         return BINOMIAL_COEFFICIENTS[n][k];
     }
 
-    public static final Point2DArray intersectLineCurve(double[] xval, double[] yval, double[] lx, double[] ly)
+    /**
+     * @param xval x coordinate values for [0]=segment_start [1]=cp1 [2]=cp2 [3]=segment_end
+     * @param yval y coordinate values for [0]=segment_start [1]=cp1 [2]=cp2 [3]=segment_end
+     * @param lx x coordinate values for [0]=line-start [1]=line_ed
+     * @param ly y coordinate values for [0]=line-start [1]=line_ed
+     * @return The intersection points in the cartesian axis
+     */
+    public static final Point2DArray intersectLineCurve(final double[] xval, final double[] yval, final double[] lx, final double[] ly)
     {
         final Point2DArray intersections = new Point2DArray();
-        double a = ly[1] - ly[0];
-        double b = lx[0] - lx[1];
-        double c = lx[0] * (ly[0] - ly[1]) +
-                   ly[0] * (lx[1] - lx[0]);
+        final double a = ly[1] - ly[0];
+        final double b = lx[0] - lx[1];
+        final double c = (lx[0] * (ly[0] - ly[1])) + (ly[0] * (lx[1] - lx[0]));
 
-        double[] bx = bezierCoeffs(xval[0], xval[1], xval[2], xval[3]);
-        double[] by = bezierCoeffs(yval[0], yval[1], yval[2], yval[3]);
+        final double[] bx = bezierCoeffs(xval[0], xval[1], xval[2], xval[3]);
+        final double[] by = bezierCoeffs(yval[0], yval[1], yval[2], yval[3]);
 
-        double[] p = new double[4];
+        final double[] p = new double[4];
 
-        p[0] = a * bx[0] + b * by[0];        /*t^3*/
-        p[1] = a * bx[1] + b * by[1];        /*t^2*/
-        p[2] = a * bx[2] + b * by[2];        /*t*/
-        p[3] = a * bx[3] + b * by[3] + c;    /*1*/
+        p[0] = (a * bx[0]) + (b * by[0]); /*t^3*/
+        p[1] = (a * bx[1]) + (b * by[1]); /*t^2*/
+        p[2] = (a * bx[2]) + (b * by[2]); /*t*/
+        p[3] = (a * bx[3]) + (b * by[3]) + c; /*1*/
 
-
-        double[] r = cubicRoots(p);
+        final double[] r = cubicRoots(p);
 
         //verify the roots are in bounds of the linear segment
         for (int i = 0; i < 3; i++)
         {
-            double t = r[i];
+            final double t = r[i];
 
-            double ix = bx[0] * Math.pow(t, 3) + bx[1] * Math.pow(t, 2) + bx[2] * t + bx[3];
-            double iy = by[0] * Math.pow(t, 3) + by[1] * Math.pow(t, 2) + by[2] * t + by[3];
+            final double ix = (bx[0] * Math.pow(t, 3)) + (bx[1] * Math.pow(t, 2)) + (bx[2] * t) + bx[3];
+            final double iy = (by[0] * Math.pow(t, 3)) + (by[1] * Math.pow(t, 2)) + (by[2] * t) + by[3];
 
             // above is intersection point assuming infinitely long line segment,
             // make sure we are also in bounds of the line
@@ -557,10 +554,7 @@ public final class Geometry
                 s = (iy - ly[0]) / (ly[1] - ly[0]);
             }
 
-            // in bounds?
-            //if (t>0 && t<1.0 && s>0 && s<1.0)
-            if (greaterOrCloseEnough(t, 0) && lesserOrCloseEnough(t, 1) &&
-                greaterOrCloseEnough(s, 0) && lesserOrCloseEnough(s, 1))
+            if (isBetween(0, t, 1) && isBetween(0, s, 1))
             {
                 intersections.push(new Point2D(ix, iy));
             }
@@ -569,56 +563,59 @@ public final class Geometry
         return intersections;
     }
 
-    public static double[] cubicRoots(double[] p)
+    public static boolean isBetween(final double min, final double value, final double max)
     {
-        if (closeEnough(p[0] ,0))
+        return greaterOrCloseEnough(value, min) && lesserOrCloseEnough(value, max);
+    }
+
+    public static double[] cubicRoots(final double[] p)
+    {
+        if (closeEnough(p[0], 0))
         {
-            double[] roots = quadraticRoots(p);
+            final double[] roots = quadraticDerivitiveRoots(p);
             return roots;
         }
 
-        double[] roots = new double[3];
+        final double[] roots = new double[3];
 
-        // a would be p0
-        double b=p[1]/p[0];
-        double c=p[2]/p[0];
-        double d=p[3]/p[0];
+        final double a = p[1] / p[0];
+        final double b = p[2] / p[0];
+        final double c = p[3] / p[0];
 
-        double q = (3*c - Math.pow(b, 2))/9;
-        double r = (9*b*c - 27 * d - 2 * Math.pow(b, 3))/54;
-        double discriminant = Math.pow(q, 3) + Math.pow(r, 2);    // polynomial discriminant
+        final double q = ((3 * b) - Math.pow(a, 2)) / 9;
+        final double r = ((9 * a * b) - (27 * c) - (2 * Math.pow(a, 3))) / 54;
+        final double d = Math.pow(q, 3) + Math.pow(r, 2);    // polynomial discriminant
 
-        if (discriminant >= 0)                                 // complex or duplicate roots
+        if (d >= 0) // complex or duplicate roots
         {
-            double sqrtD = Math.sqrt(discriminant);
-            double s = sgn(r + sqrtD) * Math.pow(Math.abs(r + sqrtD),(1/3));
-            double t = sgn(r - sqrtD) * Math.pow(Math.abs(r - sqrtD),(1/3));
+            final double sqrtD = Math.sqrt(d);
+            final double s = sgn(r + sqrtD) * Math.pow(Math.abs(r + sqrtD), (1 / 3));
+            final double t = sgn(r - sqrtD) * Math.pow(Math.abs(r - sqrtD), (1 / 3));
 
             roots[0] = s + t;                                   // real root
-            roots[1] = -b/3 - (s + t)/2;                        // real part of complex root
+            roots[1] = (-a / 3) - ((s + t) / 2);                        // real part of complex root
             roots[2] = roots[1];                                // real part of complex root
-            double rootPair = Math.abs(Math.sqrt(3)*(s - t)/2); // complex part of root pair
+            final double rootPair = Math.abs((Math.sqrt(3) * (s - t)) / 2); // complex part of root pair
 
             //discard complex roots
-            if (rootPair!=0)
+            if (rootPair != 0)
             {
-                roots[1]=-1;
-                roots[2]=-1;
+                roots[1] = -1;
+                roots[2] = -1;
             }
         }
         else
         {
-            double th = Math.acos(r/Math.sqrt(-Math.pow(q, 3)));
-            roots[0] = 2 * Math.sqrt(-q) * Math.cos(th/3) - b/3;
-            roots[1] = 2 * Math.sqrt(-q) * Math.cos((th + 2 * Math.PI)/3) - b/3;
-            roots[2] = 2 * Math.sqrt(-q) * Math.cos((th + 4 * Math.PI)/3) - b/3;
-            double rootPair  = 0.0;
+            final double th = Math.acos(r / Math.sqrt(-Math.pow(q, 3)));
+            roots[0] = (2 * Math.sqrt(-q) * Math.cos(th / 3)) - (a / 3);
+            roots[1] = (2 * Math.sqrt(-q) * Math.cos((th + (2 * Math.PI)) / 3)) - (a / 3);
+            roots[2] = (2 * Math.sqrt(-q) * Math.cos((th + (4 * Math.PI)) / 3)) - (a / 3);
         }
 
         // discard out of spec roots
-        for (int i=0;i<3;i++)
+        for (int i = 0; i < 3; i++)
         {
-            if (roots[i] < 0 || roots[i] > 1.0)
+            if ((roots[i] < 0) || (roots[i] > 1.0))
             {
                 roots[i] = -1;
             }
@@ -630,52 +627,158 @@ public final class Geometry
         return roots;
     }
 
-    private static double[] quadraticRoots(double[] p)
+    public static final BoundingBox getBoundingBox(final QuadraticCurve curve)
     {
-        double[] roots;
-
-        if (closeEnough(p[1], 0))
+        if (curve == null)
         {
-            roots = linearRoots(p);
+            return null;
+        }
+        Point2DArray points = curve.getControlPoints();
+        BoundingBox  box    = getBoundingBoxForQuadraticCurve(points);
+        return box;
+    }
+
+    public static BoundingBox getBoundingBoxForQuadraticCurve(final Point2DArray points)
+    {
+        NFastDoubleArray cubicPoints = quadraticToCubic(points.get(0).getX(), points.get(0).getY(),
+                                                        points.get(1).getX(), points.get(1).getY(),
+                                                        points.get(2).getX(), points.get(2).getY());
+
+        double[] xval = new double[4];
+        double[] yval = new double[4];
+        for (int i = 0; i<(cubicPoints.size()/2); i = i + 2)
+        {
+            xval[i] = cubicPoints.get(i);
+            yval[i] = cubicPoints.get(i+1);
+        }
+
+        return getBoundingBoxOfCubicCurve(xval, yval);
+    }
+
+    public static NFastDoubleArray quadraticToCubic(double x0, double y0, double cx, double cy, double x1, double y1)
+    {
+        double c0x = x0 + 2.0/3.0 * (cx-x0);
+        double c0y = y0 + 2.0/3.0 * (cy-y0);
+        double c1x = c0x + (x1 - x0)/3.0;
+        double c1y = c0y + (y1 - y0)/3.0;
+        return new NFastDoubleArray(x0, y0, c0x, c0y, c1x, c1y, x1, y1);
+    }
+
+    public static BoundingBox getBoundingBoxOfCubicCurve(double[] xval, double[] yval)
+    {
+        return getBoundingBoxOfCubicCurve(0, 0, xval, yval);
+    }
+
+    public static BoundingBox getBoundingBoxOfCubicCurve(final double computedLocationOffsetX, final double computedLocationOffsetY, double[] xval, double[] yval)
+    {
+        // https://stackoverflow.com/questions/2587751/an-algorithm-to-find-bounding-box-of-closed-bezier-curves/14429749#14429749
+
+        double[] xroots = quadraticDerivitiveRoots(xval);
+        double[] yroots = quadraticDerivitiveRoots(yval);
+
+        BoundingBox box = new BoundingBox();
+        box.add(xval[0], yval[0]);
+        box.add(xval[3], yval[3]);
+
+        addBezierPolynomial(xval, yval, xroots, box);
+        addBezierPolynomial(xval, yval, yroots, box);
+        return box;
+    }
+
+    private static void addBezierPolynomial(final double[] xval, final double[] yval, final double[] roots, final BoundingBox box)
+    {
+        for ( int i = 0; i < roots.length; i++)
+        {
+            if ( roots[i] >= 0 )
+            {
+                double x = cubicBezierPoint(xval, roots[i]);
+                double y = cubicBezierPoint(yval, roots[i]);
+                box.add(x,y);
+            }
+        }
+    }
+
+    private static double cubicBezierPoint(double[] val, double t)
+    {
+        double s = 1 - t;
+        double a = s * s  * s;
+        double b = 3 * s * s * t;
+        double c = 3 * s * t * t;
+        double d = t * t * t;
+
+        double v = a * val[0] +
+                   b * val[1] +
+                   c * val[2] +
+                   d * val[3];
+
+        return v;
+
+    }
+
+    private static double[] quadraticDerivitiveRoots(double[] val)
+    {
+        double a = -3 * val[0] + 9 * val[1] - 9 * val[2] + 3 * val[3];
+        double b = 6 * val[0] - 12 * val[1] + 6 * val[2];
+        double c = 3 * val[1] - 3 * val[0];
+
+        return quadraticRoots(a, b, c);
+    }
+
+    public static double[] quadraticRoots(final double a, final double b, final double c)
+    {
+        final double[] roots;
+        if (closeEnough(a, 0))
+        {
+            roots = linearRoots(b, c);
             return roots;
         }
 
-        roots = new double[] {-1, -1, -1};
+        roots = new double[] { -1, -1, -1 };
+        final double dq = (b*b) - (4 * a * c); // quadratic discriminant
+        if (dq > 0)
+        {
+            // used approach to avoid round-off, as per https://github.com/jdowner/bbox.js/blob/master/src/bbox.js
+            final double rdq = Math.sqrt(dq);
+            double t = (-b + rdq)/(2 * a);
+            if (0 < t && t < 1)
+            {
+                roots[0] = t;
+            }
 
-        double dq = Math.pow(p[2], 2) - 4*p[1]*p[3]; // quadratic discriminant
-        if (closeEnough(dq,0))
+            t = (-b - rdq)/(2 * a);
+            if (0 < t && t < 1)
+            {
+                roots[1] = t;
+            }
+        }
+        else if (closeEnough(dq, 0))
         { // One real root.
-            roots[0] = -p[2]/(2*p[1]);
-            roots[1] = -p[2]/(2*p[1]);
-        }
-        else if (dq > 0) {
-            double rdq = Math.sqrt(dq);
-            roots[0] = (-p[2] - rdq) / (2*p[1]);
-            roots[1] = (-p[2] + rdq) / (2*p[1]);
-        }
-        else
-        {
-            //Console.get().warn("quadraticRoots had dq < 0");
-            // Complex roots
-            //return null;
+            roots[0] = -b / (2 * a);
+            roots[1] = roots[0];
         }
 
         return roots;
     }
 
-    private static double[] linearRoots(double[] p)
+    public static double[] linearRoots(final double a, final double b)
     {
-        double t = -p[3] / p[2];
-        if (p[2] == 0 || t < 0 || t > 1)
+        final double[] roots = new double[] { -1, -1, -1 };
+        if ( !closeEnough(a, 0))
         {
-            return new double[]  {-1,-1,-1};
+            final double t = -b / a;
+            if (0 < t && t < 1)
+            {
+                roots[0] = t;
+            }
         }
-
-        double[] roots = new double[]  {t, -1, -1};
         return roots;
     }
 
-    public static void sortSpecial(double[] d)
+    /**
+     * sort, but place -1 at the end
+     * @param d
+     */
+    public static void sortSpecial(final double[] d)
     {
         boolean flip;
         double temp;
@@ -683,39 +786,35 @@ public final class Geometry
         do
         {
             flip = false;
-            for (int i=0;i<d.length-1;i++)
+            for (int i = 0; i < (d.length - 1); i++)
             {
-                if ((d[i+1]>=0 && d[i]>d[i+1]) ||
-                    (d[i]<0 && d[i+1]>=0))
+                if (((d[i + 1] >= 0) && (d[i] > d[i + 1])) ||
+                    ((d[i] < 0) && (d[i + 1] >= 0)))
                 {
-                    flip=true;
-                    temp=d[i];
-                    d[i]=d[i+1];
-                    d[i+1]=temp;
+                    flip = true;
+                    temp = d[i];
+                    d[i] = d[i + 1];
+                    d[i + 1] = temp;
                 }
             }
         }
         while (flip);
     }
 
-    public static final double[] bezierCoeffs(double p0,double p1,double p2,double p3)
+    public static double[] bezierCoeffs(final double p0, final double p1, final double p2, final double p3)
     {
-        double[] z = new double[4];
-        z[0] = -p0 + 3*p1 + -3*p2 + p3;
-        z[1] = 3*p0 - 6*p1 + 3*p2;
-        z[2] = -3*p0 + 3*p1;
+        final double[] z = new double[4];
+        z[0] = -p0 + (3 * p1) + (-3 * p2) + p3;
+        z[1] = ((3 * p0) - (6 * p1)) + (3 * p2);
+        z[2] = (-3 * p0) + (3 * p1);
         z[3] = p0;
 
         return z;
     }
 
-    public static int sgn( double x )
+    public static int sgn(final double x)
     {
         return (x < 0.0) ? -1 : 1;
-    }
-
-    public static final void cubicRoots(Point2D points) {
-
     }
 
     public static final double polyterm(final int n, final int k, final double t)
@@ -1503,9 +1602,9 @@ public final class Geometry
         Point2D center = points.get(0);
         Point2D pathStart = new Point2D(0, 0);
         Point2D segmentStart = pathStart;
-        
+
         int i = PathPartList.skipRedundantLeadingMoveTo(path);
-        
+
         // A set is used as vertex's may intersect, so the start/end of two liens will intersect
         for (; i < path.size(); i++)
         {
@@ -1605,16 +1704,17 @@ public final class Geometry
                     final double x3 = entryPoints.get(4);
                     final double y3 = entryPoints.get(5);
 
+                    final double[] xvals = new double[] { x0, x1, x2, x3 };
+                    final double[] yvals = new double[] { y0, y1, y2, y3 };
+
                     final Point2D end = new Point2D(x3, y3);
 
                     for (int j = 1; j < points.size(); j++)
                     {
                         final Point2D cardinal = points.get(j);
-                        double[] xvals = new double[] { x0, x1, x2, x3};
-                        double[] yvals = new double[] { y0, y1, y2, y3};
 
-                        double[] lx = new double[] { center.getX(), cardinal.getX()};
-                        double[] ly = new double[] { center.getY(), cardinal.getY()};
+                        final double[] lx = new double[] { center.getX(), cardinal.getX() };
+                        final double[] ly = new double[] { center.getY(), cardinal.getY() };
                         final Point2DArray intersectPoints = Geometry.intersectLineCurve(xvals, yvals, lx, ly);
 
                         if (intersectPoints.size() > 0)
@@ -1639,7 +1739,7 @@ public final class Geometry
     public static Point2DArray getCardinalIntersects(final PathPartList path, Direction[] requestedCardinals)
     {
         final Point2DArray cardinals = getCardinals(path.getBoundingBox(), requestedCardinals);
-       
+
         @SuppressWarnings("unchecked")
         final Set<Point2D>[] intersections = new Set[cardinals.size()];// c is removed, so -1
 

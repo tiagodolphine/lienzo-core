@@ -146,7 +146,7 @@ public class WiresShape extends WiresContainer
         }
     }
 
-    public void setWiresShapeControl( final WiresShapeControl control ) {
+    public void setControl( final WiresShapeControl control ) {
         m_control = control;
     }
 
