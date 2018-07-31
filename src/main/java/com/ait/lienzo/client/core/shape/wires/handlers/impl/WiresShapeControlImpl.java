@@ -403,6 +403,7 @@ public class WiresShapeControlImpl
     private void shapeUpdated(final boolean isAcceptOp) {
         ShapeControlUtils.updateSpecialConnections(m_connectorsWithSpecialConnections,
                                                    isAcceptOp);
+        ShapeControlUtils.updateNestedShapes(getShape());
     }
 
     private void clearState() {

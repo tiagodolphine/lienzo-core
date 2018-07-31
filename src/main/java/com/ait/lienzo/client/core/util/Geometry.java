@@ -22,7 +22,6 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.ait.lienzo.client.core.shape.AbstractMultiPathPartShape;
-import com.ait.lienzo.client.core.shape.BezierCurve;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.MultiPath;
 import com.ait.lienzo.client.core.shape.QuadraticCurve;
@@ -46,8 +45,6 @@ import com.ait.tooling.nativetools.client.collection.NFastDoubleArrayJSO;
 public final class Geometry
 {
     private static final double NRRF_PRECISION        = 0.000001;
-
-    private static double[][]   BINOMIAL_COEFFICIENTS = { { 1 }, { 1, 1 } };
 
     public static final double  RADIANS_0             = toRadians(0);
 
@@ -83,125 +80,14 @@ public final class Geometry
         return (Math.abs(a - b) < NRRF_PRECISION);
     }
 
-    protected static boolean greaterOrCloseEnough(final double a, final double b)
+    public static boolean greaterOrCloseEnough(final double a, final double b)
     {
         return closeEnough(a, b) || (a > b);
     }
 
-    protected static boolean lesserOrCloseEnough(final double a, final double b)
+    public static boolean lesserOrCloseEnough(final double a, final double b)
     {
         return closeEnough(a, b) || (a < b);
-    }
-
-    public static final BoundingBox getBoundingBox(final BezierCurve curve)
-    {
-        if (curve == null)
-        {
-            return null;
-        }
-        return getBoundingBoxOfCurve(curve.getControlPoints());
-    }
-
-    public static final BoundingBox getBoundingBoxOfCurve(final Point2DArray points)
-    {
-        return getBoundingBoxOfCurve(0, 0, points);
-    }
-
-    public static final BoundingBox getBoundingBoxOfCurve(double computedLocationOffsetX, double computedLocationOffsetY, final Point2DArray points)
-    {
-        if (null == points)
-        {
-            return null;
-        }
-        int size = points.size();
-
-        if (size < 3)
-        {
-            return null;
-        }
-        double minx = Double.MAX_VALUE;
-
-        double miny = Double.MAX_VALUE;
-
-        double maxx = -Double.MAX_VALUE;
-
-        double maxy = -Double.MAX_VALUE;
-
-        final NFastDoubleArrayJSO xval = NFastDoubleArrayJSO.make();
-
-        final NFastDoubleArrayJSO yval = NFastDoubleArrayJSO.make();
-
-        for (int i = 0; i < size; i++)
-        {
-            final Point2D p = points.get(i);
-
-            xval.push(p.getX());
-
-            yval.push(p.getY());
-        }
-        final NFastDoubleArrayJSO inflections = getInflections(points, xval, yval);
-
-        size = inflections.size();
-
-        for (int i = 0; i < size; i++)
-        {
-            final double t = inflections.get(i);
-
-            final double x = getValue(t, xval);
-
-            final double y = getValue(t, yval);
-
-            minx = Math.min(x, minx);
-
-            maxx = Math.max(x, maxx);
-
-            miny = Math.min(y, miny);
-
-            maxy = Math.max(y, maxy);
-        }
-        return new BoundingBox(computedLocationOffsetX + minx, computedLocationOffsetY + miny, computedLocationOffsetX + maxx, computedLocationOffsetY + maxy);
-    }
-
-    private static final NFastDoubleArrayJSO getInflections(final Point2DArray points, final NFastDoubleArrayJSO xval, final NFastDoubleArrayJSO yval)
-    {
-        int size = points.size();
-
-        int ordr = size - 1;
-
-        NFastDoubleArrayJSO root;
-
-        NFastDoubleArrayJSO tval = NFastDoubleArrayJSO.make();
-
-        tval.push(0.0);
-
-        tval.push(1.0);
-
-        populateT(1, xval, tval);
-        populateT(1, yval, tval);
-
-        if (ordr > 2)
-        {
-            populateT(2, xval, tval);
-            populateT(2, yval, tval);
-        }
-        return tval.uniq();
-    }
-
-    private static void populateT(final int derivative, final NFastDoubleArrayJSO xval, final NFastDoubleArrayJSO tval)
-    {
-        NFastDoubleArrayJSO root = findAllRoots(derivative, xval);
-
-        int size = root.size();
-
-        for (int i = 0; i < size; i++)
-        {
-            final double t = root.get(i);
-
-            if (0 < t && t < 1)
-            {
-                tval.push(t);
-            }
-        }
     }
 
     public static BoundingBox getBoundingBoxOfArcTo(final Point2D p0, final Point2D p1, final Point2D p2, final double r)
@@ -342,123 +228,6 @@ public final class Geometry
         return new BoundingBox(xmin, ymin, xmax, ymax);
     }
 
-    private static final NFastDoubleArrayJSO findAllRoots(final int derivative, final NFastDoubleArrayJSO values)
-    {
-        final NFastDoubleArrayJSO root = NFastDoubleArrayJSO.make();
-
-        if (areLinear(values) || derivative == 1 && values.size() == 3)
-        {
-            if (derivative > 1)
-            {
-                return root;
-            }
-            final double beg = getDerivative(1, 0, values);
-
-            final double end = getDerivative(1, 1, values);
-
-            if ((beg > 0) && (end > 0))
-            {
-                return root;
-            }
-            if ((beg < 0) && (end < 0))
-            {
-                return root;
-            }
-            root.push(map(0, beg, end, 0, 1));
-
-            return root;
-        }
-        for (double t = 0; t <= 1.0; t += 0.01)
-        {
-            final double r = Math.round(findRoots(derivative, t, values) / NRRF_PRECISION) * NRRF_PRECISION;
-
-            if (root.contains(r))
-            {
-                continue;
-            }
-            root.push(r);
-        }
-        return root;
-    }
-
-    private static final double findRoots(final int derivative, final double t, final NFastDoubleArrayJSO values)
-    {
-        return findRoots(derivative, t, values, 0);
-    }
-
-    private static final double findRoots(final int derivative, final double t, final NFastDoubleArrayJSO values, final double offset)
-    {
-        return findRootsRecursive(derivative, t, values, offset, 0);
-    }
-
-    /**
-     * Newton-Raphson root finding (with depth capping).
-     * Iteratively compute x(n+1) = x(n) - f(x)/f'(x),
-     * until (x(n+1) - x(n)) approaches zero with a
-     * satisfactory precision.
-     */
-    private static final double findRootsRecursive(final int derivative, final double t, final NFastDoubleArrayJSO values, final double offset, final int depth)
-    {
-        final double d0 = getDerivative(derivative + 0, t, values) - offset;
-
-        final double df = getDerivative(derivative + 1, t, values);
-
-        double t2 = t - (d0 / df);
-
-        if (df == 0)
-        {
-            t2 = t - d0;
-        }
-        if (depth > 12)
-        {
-            if (Math.abs(t - t2) < NRRF_PRECISION)
-            {
-                return t2;
-            }
-            return -1;
-        }
-        if (Math.abs(t - t2) > NRRF_PRECISION)
-        {
-            return findRootsRecursive(derivative, t2, values, offset, depth + 1);
-        }
-        return t2;
-    }
-
-    private static final double map(final double value, final double istart, final double istop, final double ostart, final double ostop)
-    {
-        return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
-    }
-
-    private static final double getDerivative(final int derivative, final double t, final NFastDoubleArrayJSO values)
-    {
-        final int n = values.size() - 1;
-
-        if (n == 0)
-        {
-            return 0;
-        }
-        if (derivative == 0)
-        {
-            double value = 0;
-
-            for (int k = 0; k <= n; k++)
-            {
-                value += binomial(n, k) * Math.pow(1 - t, n - k) * Math.pow(t, k) * values.get(k);
-            }
-            return value;
-        }
-        else
-        {
-            final NFastDoubleArrayJSO lowers = NFastDoubleArrayJSO.make();
-
-            for (int k = 0; k < n; k++)
-            {
-                lowers.push(n * (values.get(k + 1) - values.get(k)));
-            }
-            return getDerivative(derivative - 1, t, lowers);
-        }
-    }
-
     private static final boolean areLinear(final NFastDoubleArrayJSO values)
     {
         final int sz = values.size();
@@ -475,37 +244,6 @@ public final class Geometry
             }
         }
         return true;
-    }
-
-    public static final double binomial(final int n, final int k)
-    {
-        while (n >= BINOMIAL_COEFFICIENTS.length)
-        {
-            final int size = BINOMIAL_COEFFICIENTS.length;
-
-            final double[][] repl = new double[size + 1][];
-
-            for (int i = 0; i < size; i++)
-            {
-                repl[i] = BINOMIAL_COEFFICIENTS[i];
-            }
-            final double[] curr = BINOMIAL_COEFFICIENTS[size - 1];
-
-            final double[] next = new double[size + 1];
-
-            repl[size] = next;
-
-            next[0] = 1;
-
-            for (int i = 1; i < curr.length; i++)
-            {
-                next[i] = curr[i] + curr[i - 1];
-            }
-            next[size] = 1;
-
-            BINOMIAL_COEFFICIENTS = repl;
-        }
-        return BINOMIAL_COEFFICIENTS[n][k];
     }
 
     /**
@@ -815,30 +553,6 @@ public final class Geometry
     public static int sgn(final double x)
     {
         return (x < 0.0) ? -1 : 1;
-    }
-
-    public static final double polyterm(final int n, final int k, final double t)
-    {
-        return Math.pow((1 - t), n - k) * Math.pow(t, k);
-    }
-
-    private static final double getValue(final double t, final NFastDoubleArrayJSO values)
-    {
-        final int n = values.size() - 1;
-
-        double value = 0;
-
-        for (int k = 0; k <= n; k++)
-        {
-            final double v = values.get(k);
-
-            if (v == 0)
-            {
-                continue;
-            }
-            value += binomial(n, k) * polyterm(n, k, t) * v;
-        }
-        return value;
     }
 
     /**
@@ -1464,16 +1178,16 @@ public final class Geometry
     public static final Point2DArray getCardinalIntersects(final AbstractMultiPathPartShape<?> shape, Direction[] requestedCardinals)
     {
         final Point2DArray cardinals = getCardinals(shape.getBoundingBox(), requestedCardinals);
-        final Set<Point2D>[] intersections = getPathCenterPointProjectionIntersects(shape, cardinals);
+        final Set<Point2D>[] intersections = getCardinalIntersects(shape, cardinals);
         Point2DArray points = removeInnerPoints(cardinals.get(0), intersections);
 
         return points;
     }
 
-    public static Set<Point2D>[] getPathCenterPointProjectionIntersects(AbstractMultiPathPartShape<?> shape, Point2DArray points)
+    public static Set<Point2D>[] getCardinalIntersects(AbstractMultiPathPartShape<?> shape, Point2DArray cardinals)
     {
         @SuppressWarnings("unchecked")
-        final Set<Point2D>[] intersections = new Set[points.size()];
+        final Set<Point2D>[] intersections = new Set[cardinals.size()];
 
         final NFastArrayList<PathPartList> paths = shape.getActualPathPartListArray();
 
@@ -1481,7 +1195,7 @@ public final class Geometry
 
         for (int i = 0; i < size; i++)
         {
-            getPathPointsProjectionIntersects(paths.get(i), points, intersections, true);
+            getPathPointsProjectionIntersects(paths.get(i), cardinals, intersections, true);
         }
         return intersections;
     }
@@ -1520,7 +1234,7 @@ public final class Geometry
                               p,
                               width);
 
-            Set<Point2D>[] set = Geometry.getPathCenterPointProjectionIntersects(path,
+            Set<Point2D>[] set = Geometry.getCardinalIntersects(path,
                                                                                  new Point2DArray(c,
                                                                                  p));
             Point2DArray points = Geometry.removeInnerPoints(c,
@@ -1592,7 +1306,7 @@ public final class Geometry
 
     public static Point2D getPathPointsProjectionIntersects(MultiPath path, Point2D center, Point2D point)
     {
-        Set<Point2D>[] intersections = getPathCenterPointProjectionIntersects(path,  new Point2DArray(center, point));
+        Set<Point2D>[] intersections = getCardinalIntersects(path,  new Point2DArray(center, point));
         Point2D intersection = (Point2D) intersections[0].toArray()[0];
         return intersection;
     }
@@ -1961,7 +1675,7 @@ public final class Geometry
         points.push(center);
         points.push(projectionPoint);
 
-        Set<Point2D>[] intersects = Geometry.getPathCenterPointProjectionIntersects(path, points);
+        Set<Point2D>[] intersects = Geometry.getCardinalIntersects(path, points);
 
         Point2D nearest = null;
         for (Set<Point2D> set : intersects)
