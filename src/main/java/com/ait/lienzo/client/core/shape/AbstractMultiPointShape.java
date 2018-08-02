@@ -120,11 +120,11 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
     private static final class DefaultMultiPointShapeHandleFactory implements IControlHandleFactory
     {
-        private static final double              R0                 = 5;
+        private static final double              R0                 = 6;
 
         private static final double              R1                 = 10;
 
-        private static final double              ANIMATION_DURATION = 150;
+        private static final double              ANIMATION_DURATION = 100;
 
         private final AbstractMultiPointShape<?> m_shape;
 
@@ -192,7 +192,8 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
                 final Circle prim = new Circle(R0).setX(m_shape.getX() + p.getX()).setY(m_shape.getY() + p.getY()).setFillColor(ColorName.DARKRED).setFillAlpha(0.8).setStrokeAlpha(0).setDraggable(true).setDragMode(m_dmode);
 
-                prim.setSelectionBoundsOffset(R0 * 0.5);
+                prim.setSelectionStrokeOffset(R1);
+                prim.setSelectionBoundsOffset(R1);
 
                 chlist.add(new AbstractPointControlHandle()
                 {

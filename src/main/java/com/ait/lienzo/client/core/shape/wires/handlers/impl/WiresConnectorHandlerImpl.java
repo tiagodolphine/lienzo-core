@@ -5,6 +5,7 @@ import com.ait.lienzo.client.core.event.NodeDragMoveEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeMouseClickEvent;
 import com.ait.lienzo.client.core.event.NodeMouseDoubleClickEvent;
+import com.ait.lienzo.client.core.event.NodeMouseDownEvent;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
@@ -18,7 +19,9 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     private final WiresManager m_wiresManager;
     private final Consumer<Event> clickEventConsumer;
     private final Consumer<Event> doubleClickEventConsumer;
-    private final Timer clickTimer;
+    private final Consumer<Event> mouseDownEventConsumer;
+    private Timer clickTimer;
+    private Timer mouseDownTimer;
     private Event event;
 
     public static class Event {
@@ -37,31 +40,38 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     }
 
     public static WiresConnectorHandlerImpl build(final WiresConnector connector,
-                                                   final WiresManager wiresManager) {
+                                                  final WiresManager wiresManager) {
         final WiresConnectorEventConsumers consumers = new WiresConnectorEventConsumers(connector);
         return new WiresConnectorHandlerImpl(connector,
-                                              wiresManager,
-                                              consumers.switchVisibility(),
-                                              consumers.addControlPoint());
+                                             wiresManager,
+                                             consumers.switchVisibility(),
+                                             consumers.addControlPoint(),
+                                             consumers.addControlPoint());
     }
 
     public WiresConnectorHandlerImpl(final WiresConnector connector,
-                                      final WiresManager wiresManager,
-                                      final Consumer<Event> clickEventConsumer,
-                                      final Consumer<Event> doubleClickEventConsumer) {
-        this.m_connector = connector;
-        this.m_wiresManager = wiresManager;
-        this.clickEventConsumer = clickEventConsumer;
-        this.doubleClickEventConsumer = doubleClickEventConsumer;
+                                     final WiresManager wiresManager,
+                                     final Consumer<Event> clickEventConsumer,
+                                     final Consumer<Event> doubleClickEventConsumer,
+                                     final Consumer<Event> mouseDownEventConsumer) {
+        this(connector, wiresManager, clickEventConsumer, doubleClickEventConsumer, mouseDownEventConsumer, null, null);
+
         this.clickTimer = new Timer() {
             @Override
-            public void run()
-            {
+            public void run() {
                 if (getWiresManager().getSelectionManager() != null) {
                     getWiresManager().getSelectionManager().selected(connector,
                                                                      event.isShiftKeyDown);
                 }
                 clickEventConsumer.accept(event);
+                event = null;
+            }
+        };
+
+        this.mouseDownTimer = new Timer() {
+            @Override
+            public void run() {
+                mouseDownEventConsumer.accept(event);
                 event = null;
             }
         };
@@ -71,12 +81,16 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
                               final WiresManager wiresManager,
                               final Consumer<Event> clickEventConsumer,
                               final Consumer<Event> doubleClickEventConsumer,
-                              final Timer clickTimer) {
+                              final Consumer<Event> mouseDownEventConsumer,
+                              final Timer clickTimer,
+                              final Timer mouseDownTimer) {
         this.m_connector = connector;
         this.m_wiresManager = wiresManager;
         this.clickEventConsumer = clickEventConsumer;
         this.doubleClickEventConsumer = doubleClickEventConsumer;
+        this.mouseDownEventConsumer = mouseDownEventConsumer;
         this.clickTimer = clickTimer;
+        this.mouseDownTimer = mouseDownTimer;
     }
 
     @Override
@@ -102,21 +116,35 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
 
     @Override
     public void onNodeMouseClick(final NodeMouseClickEvent event) {
-        if (clickTimer.isRunning()) {
-            clickTimer.cancel();
+        checkRunningTimer(clickTimer);
+        checkRunningTimer(mouseDownTimer);
+        setEvent(event.getX(), event.getY(), event.isShiftKeyDown());
+        clickTimer.schedule(50);
+    }
+
+    @Override
+    public void onNodeMouseDown(final NodeMouseDownEvent event) {
+        checkRunningTimer(clickTimer);
+        checkRunningTimer(mouseDownTimer);
+        setEvent(event.getX(), event.getY(), event.isShiftKeyDown());
+        mouseDownTimer.schedule(150);
+    }
+
+    private void checkRunningTimer(Timer timer) {
+        if (timer.isRunning()) {
+            timer.cancel();
         }
-        this.event = new Event(event.getX(),
-                               event.getY(),
-                               event.isShiftKeyDown());
-        clickTimer.schedule(150);
     }
 
     @Override
     public void onNodeMouseDoubleClick(final NodeMouseDoubleClickEvent event) {
         clickTimer.cancel();
-        doubleClickEventConsumer.accept(new Event(event.getX(),
-                                                  event.getY(),
-                                                  event.isShiftKeyDown()));
+        doubleClickEventConsumer.accept(setEvent(event.getX(), event.getY(), event.isShiftKeyDown()));
+    }
+
+    private Event setEvent(int x, int y, boolean shiftKeyDown) {
+        this.event = new Event(x, y, shiftKeyDown);
+        return this.event;
     }
 
     public static class WiresConnectorEventConsumers {

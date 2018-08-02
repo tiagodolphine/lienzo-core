@@ -31,6 +31,8 @@ import com.ait.lienzo.client.core.shape.Circle;
 import com.ait.lienzo.client.core.shape.Group;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
+import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator;
+import com.ait.lienzo.client.core.shape.decorator.MagnetDecorator;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresMagnetsControl;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.ColorKeyRotor;
@@ -60,6 +62,12 @@ public class MagnetManager
     private NFastStringMap<Magnets>   m_magnetRegistry        = new NFastStringMap<>();
 
     private int                       m_ctrlSize              = CONTROL_RADIUS;
+
+    private MagnetDecorator m_magnetDecorator                 = new MagnetDecorator();
+
+    public MagnetManager()
+    {
+    }
 
     public ImageData drawMagnetsToBack(Magnets magnets, NFastStringMap<WiresShape> shapeColors, NFastStringMap<WiresMagnet> magnetColors, ScratchPad scratch)
     {
@@ -122,7 +130,8 @@ public class MagnetManager
         {
             final double mx = primLoc.getX() + p.getX();
             final double my = primLoc.getY() + p.getY();
-            WiresMagnet m = new WiresMagnet(magnets, null, i++, p.getX(), p.getY(), getControlPrimitive(mx, my), true);
+            final Shape<?> primitive = m_magnetDecorator.decorate(getControlPrimitive(mx, my), IShapeDecorator.ShapeState.VALID);
+            WiresMagnet m = new WiresMagnet(magnets, null, i++, p.getX(), p.getY(), primitive, true);
             Direction d = getDirection(p, box);
             m.setDirection(d);
             list.add(m);
@@ -238,6 +247,11 @@ public class MagnetManager
         this.m_ctrlSize = m_ctrlSize;
     }
 
+    public void setMagnetDecorator(MagnetDecorator magnetDecorator)
+    {
+        this.m_magnetDecorator = magnetDecorator;
+    }
+
     public static Point2DArray getWiresIntersectionPoints(final WiresShape wiresShape, Direction[] requestedCardinals)
     {
         return Geometry.getCardinalIntersects(wiresShape.getPath(), requestedCardinals);
@@ -248,9 +262,6 @@ public class MagnetManager
         return new Circle(m_ctrlSize)
                 .setX(x)
                 .setY(y)
-                .setFillColor(ColorName.DARKRED)
-                .setFillAlpha(0.8)
-                .setStrokeAlpha(0)
                 .setDraggable(true)
                 .setDragMode(DragMode.SAME_LAYER);
     }
