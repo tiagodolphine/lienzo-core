@@ -269,7 +269,7 @@ public class WiresDockingControlImpl extends AbstractWiresParentPickerControl
     @Override
     public void undock() {
         final WiresShape shape = getShape();
-        final WiresContainer parent = shape.getParent();
+        final WiresContainer parent = (shape.getDockedTo() != null ? shape.getDockedTo() : shape.getParent());
         if (null != parent) {
             parent.remove(shape);
             shape.setDockedTo(null);
