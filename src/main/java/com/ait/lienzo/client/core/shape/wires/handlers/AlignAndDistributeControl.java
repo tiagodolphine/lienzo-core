@@ -32,9 +32,7 @@ public interface AlignAndDistributeControl
 
     public void refresh(boolean transforms, boolean attributes);
 
-    public boolean isDraggable();
-
-    public void dragStart();
+    void dragStart();
 
     public void dragEnd();
 

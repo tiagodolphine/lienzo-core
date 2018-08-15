@@ -24,21 +24,23 @@ import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONParser;
 import com.google.gwt.json.client.JSONValue;
 
+import java.util.HashMap;
+
 public final class PathPartList
 {
-    private double                m_cpx;
+    private double                                      m_cpx;
 
-    private double                m_cpy;
+    private double                                      m_cpy;
 
-    private boolean               m_fin;
+    private boolean                                     m_fin;
 
-    private boolean               m_mov;
+    private boolean                                     m_mov;
 
-    private Path2D                m_p2d;
+    private Path2D                                      m_p2d;
 
-    private BoundingBox           m_box;
+    private BoundingBox                                 m_box;
 
-    private final PathPartListJSO m_jso;
+    private final PathPartListJSO                       m_jso;
 
     public PathPartList()
     {
@@ -385,14 +387,15 @@ public final class PathPartList
         {
             return m_box;
         }
+
         final int size = size();
 
         if (size < 1)
         {
             m_box = new BoundingBox(0, 0, 0, 0);
-
             return m_box;
         }
+
         m_box = new BoundingBox();
 
         double oldx = 0;

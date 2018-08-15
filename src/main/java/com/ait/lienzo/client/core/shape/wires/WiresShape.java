@@ -35,6 +35,8 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.shared.core.types.EventPropagationMode;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.ait.lienzo.client.core.shape.wires.IControlHandle.ControlHandleType;
+
 
 public class WiresShape extends WiresContainer
 {
@@ -236,15 +238,14 @@ public class WiresShape extends WiresContainer
 
                 if ((null != controls) && (controls.isActive()))
                 {
-                    setWiresShapeControlHandleList(createControlHandles(type, (ControlHandleList) controls));
+                    this.m_ctrls = createControlHandles(type, (ControlHandleList) controls);
                 }
             }
         }
-
         return getControls();
     }
 
-    protected WiresShapeControlHandleList createControlHandles(final ControlHandleType type, final ControlHandleList controls)
+    protected WiresShapeControlHandleList createControlHandles(IControlHandle.ControlHandleType type, ControlHandleList controls)
     {
         return new WiresShapeControlHandleList(this, type, controls);
     }
@@ -283,7 +284,7 @@ public class WiresShape extends WiresContainer
 
         if (null != getControl())
         {
-            getControl().reset();
+            getControl().destroy();
             m_control = null;
         }
     }

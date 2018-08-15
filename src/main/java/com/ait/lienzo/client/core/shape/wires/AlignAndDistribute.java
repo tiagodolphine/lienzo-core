@@ -18,8 +18,10 @@ package com.ait.lienzo.client.core.shape.wires;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
+import com.ait.lienzo.client.core.Attribute;
 import com.ait.lienzo.client.core.shape.Attributes;
 import com.ait.lienzo.client.core.shape.IDrawable;
 import com.ait.lienzo.client.core.shape.IPrimitive;
@@ -198,6 +200,11 @@ public class AlignAndDistribute
 
     public AlignAndDistributeControl addShape(final IDrawable<?> group)
     {
+        return addShape(group, true);
+    }
+
+    public AlignAndDistributeControl addShape(IDrawable<?> group, boolean useChangeListener)
+    {
         final String uuid = group.uuid();
 
         AlignAndDistributeControl handler = m_shapes.get(uuid);
@@ -205,8 +212,12 @@ public class AlignAndDistribute
         // only add if the group has not already been added
         if (null == handler)
         {
-            handler = new AlignAndDistributeControlImpl((IPrimitive<?>) group, this, m_alignmentCallback, group.getBoundingBoxAttributes());
-
+            List<Attribute> attrs = null;
+            if (useChangeListener)
+            {
+                attrs = group.getBoundingBoxAttributes();
+            }
+            handler = new AlignAndDistributeControlImpl((IPrimitive<?>) group, this, m_alignmentCallback, attrs);
             m_shapes.put(uuid, handler);
         }
         return handler;

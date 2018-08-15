@@ -106,6 +106,7 @@ public class WiresShapeHighlightImpl implements WiresShapeHighlight<PickerPart.S
             m_path.setStrokeColor("#0000FF");
 
             m_path.setStrokeAlpha(0.8);
+            m_path.setFillColor((String)null);
 
             parent.getGroup().getOverLayer().add(m_path);
 

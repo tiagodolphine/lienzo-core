@@ -24,17 +24,22 @@ public interface WiresControl
     /**
      * Execute the control's logic.
      */
-    public void execute();
+    void execute();
 
     /**
      * Clear the control's state.
      * No operations expected for wires objects.
      */
-    public void clear();
+    void clear();
 
     /**
      * Return the wires object/s to it's initial state
      * and clears current control's state.
      */
-    public void reset();
+    void reset();
+
+    /**
+     * Destroys the control instance
+     */
+    void destroy();
 }

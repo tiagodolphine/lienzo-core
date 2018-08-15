@@ -100,7 +100,6 @@ public class WiresShapeControlHandleList implements IControlHandleList
     void refresh()
     {
         final BoundingBox bbox = getPath().getBoundingBox();
-
         resize(bbox.getWidth(), bbox.getHeight(), true);
     }
 
@@ -165,6 +164,11 @@ public class WiresShapeControlHandleList implements IControlHandleList
         return m_ctrls.isVisible();
     }
 
+    public WiresShape getWiresShape()
+    {
+        return m_wires_shape;
+    }
+
     @Override
     public HandlerRegistrationManager getHandlerRegistrationManager()
     {
@@ -197,7 +201,9 @@ public class WiresShapeControlHandleList implements IControlHandleList
         {
             for (int i = 0; i < POINTS_SIZE; i++)
             {
-                final IPrimitive<?> control = m_ctrls.getHandle(i).getControl();
+                final IControlHandle handle = m_ctrls.getHandle(i);
+                final IPrimitive<?> control = handle.getControl();
+                control.setUserData(this); // TODO (mdp) this is hack (and not robust, if something else re-uses this field) but for now it allows a fix in resize code that shifts the canvas location
 
                 m_registrationManager.register(control.addNodeDragStartHandler(new NodeDragStartHandler()
                 {
@@ -263,7 +269,17 @@ public class WiresShapeControlHandleList implements IControlHandleList
     {
         if (m_wires_shape.isResizable())
         {
-            final double[] r = resizeWhileDrag(dragEvent);
+            // Ensure magnets hidden while resizing.
+            if (null != m_wires_shape.getMagnets())
+            {
+                m_wires_shape.getMagnets().hide();
+            }
+        }
+
+
+        if (m_wires_shape.isResizable())
+        {
+            final double[] r = this.resizeWhileDrag(dragEvent);
 
             m_wires_shape.getHandlerManager().fireEvent(new WiresResizeStartEvent(m_wires_shape, dragEvent, (int) r[0], (int) r[1], r[2], r[3]));
         }
@@ -293,20 +309,15 @@ public class WiresShapeControlHandleList implements IControlHandleList
     {
         if (m_wires_shape.isResizable())
         {
-            // Ensure magnets hidden while resizing.
+            final Point2DArray points = getControlPointsArray();
 
-            final Magnets mags = m_wires_shape.getMagnets();
+            final double[] attrs = getBBAttributes(points);
 
-            if (null != mags)
-            {
-                mags.hide();
-            }
-            final double[] attrs = getBBAttributes(getControlPointsArray());
-
-            resize(attrs[0], attrs[1], attrs[2], attrs[3], false);
+            this.resize(attrs[0], attrs[1], attrs[2], attrs[3], false);
 
             return attrs;
         }
+
         return null;
     }
 
@@ -348,7 +359,7 @@ public class WiresShapeControlHandleList implements IControlHandleList
         return result;
     }
 
-    protected void updateParentLocation()
+    public void updateParentLocation()
     {
         if ((null == m_parent) && (null != getGroup().getLayer()))
         {

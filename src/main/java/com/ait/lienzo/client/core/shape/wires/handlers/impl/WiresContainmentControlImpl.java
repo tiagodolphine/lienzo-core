@@ -134,17 +134,23 @@ public class WiresContainmentControlImpl extends AbstractWiresParentPickerContro
         }
     }
 
-    private void addIntoParent(final WiresShape shape, final WiresContainer parent, final Point2D location)
-    {
-        final WiresLayer layer = getWiresLayer();
+    @Override
+    public void destroy() {
+        clear();
+    }
 
-        if ((parent == null) || (parent == layer))
-        {
-            layer.getLayoutHandler().add(shape, layer, location);
-        }
-        else
-        {
-            parent.getLayoutHandler().add(shape, parent, location);
+    private void addIntoParent(final WiresShape shape,
+                               final WiresContainer parent,
+                               final Point2D location) {
+        final WiresLayer m_layer = getWiresLayer();
+        if (parent == null || parent == m_layer) {
+            m_layer.getLayoutHandler().add(shape,
+                                           m_layer,
+                                           location);
+        } else {
+            parent.getLayoutHandler().add(shape,
+                                          parent,
+                                          location);
         }
         shape.setDockedTo(null);
     }

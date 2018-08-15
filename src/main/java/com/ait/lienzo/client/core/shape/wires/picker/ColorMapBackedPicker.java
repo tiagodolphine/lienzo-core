@@ -18,7 +18,11 @@ package com.ait.lienzo.client.core.shape.wires.picker;
 
 import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.shape.MultiPath;
-import com.ait.lienzo.client.core.shape.wires.*;
+import com.ait.lienzo.client.core.shape.wires.BackingColorMapUtils;
+import com.ait.lienzo.client.core.shape.wires.PickerPart;
+import com.ait.lienzo.client.core.shape.wires.WiresContainer;
+import com.ait.lienzo.client.core.shape.wires.WiresLayer;
+import com.ait.lienzo.client.core.shape.wires.WiresShape;
 import com.ait.lienzo.client.core.types.ColorKeyRotor;
 import com.ait.lienzo.client.core.types.ImageDataPixelColor;
 import com.ait.lienzo.client.core.types.Point2D;

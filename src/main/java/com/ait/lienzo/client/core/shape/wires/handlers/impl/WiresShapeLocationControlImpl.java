@@ -165,8 +165,11 @@ public class WiresShapeLocationControlImpl implements WiresShapeLocationControl
     }
 
     @Override
-    public Point2D getShapeLocation()
-    {
+    public void destroy() {
+        clear();
+    }
+
+    public Point2D getShapeLocation() {
         return getShapeInitialLocation().copy().offset(getCurrentDelta());
     }
 

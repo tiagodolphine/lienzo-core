@@ -215,8 +215,12 @@ public class WiresParentPickerControlImpl implements WiresParentPickerControl, W
     }
 
     @Override
-    public Point2D getShapeLocation()
-    {
+    public void destroy() {
+        clear();
+        shapeLocationControl.destroy();
+    }
+
+    public Point2D getShapeLocation() {
         return shapeLocationControl.getShapeLocation();
     }
 

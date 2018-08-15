@@ -164,8 +164,6 @@ public class WiresCompositeControlImpl extends AbstractWiresBoundsConstraintCont
                 for (final WiresShape shape : shapes)
                 {
                     shape.getControl().getParentPickerControl().setShapeLocation(locs[i++]);
-
-                    postUpdateShape(shape);
                 }
             }
         }
@@ -300,12 +298,11 @@ public class WiresCompositeControlImpl extends AbstractWiresBoundsConstraintCont
         for (final WiresShape shape : m_selectedShapes)
         {
             shape.getControl().getContainmentControl().execute();
-
-            postUpdateShape(shape);
         }
 
         for (WiresConnector connector : m_selectedConnectors) {
             connector.getControl().execute();
+            WiresConnector.updateHeadTailForRefreshedConnector(connector);
         }
         ShapeControlUtils.updateSpecialConnections(m_connectorsWithSpecialConnections, true);
 
@@ -341,6 +338,13 @@ public class WiresCompositeControlImpl extends AbstractWiresBoundsConstraintCont
             WiresConnector.updateHeadTailForRefreshedConnector(connector);
         }
         clearState();
+    }
+
+    @Override
+    public void destroy() {
+        for (WiresShape shape : m_selectedShapes) {
+            shape.getControl().destroy();
+        }
     }
 
     @Override
@@ -402,15 +406,7 @@ public class WiresCompositeControlImpl extends AbstractWiresBoundsConstraintCont
         control.getDockingControl().setEnabled(true);
     }
 
-    private void postUpdateShape(final WiresShape shape)
-    {
-        shape.getControl().getMagnetsControl().shapeMoved();
-
-        ShapeControlUtils.updateNestedShapes(shape);
-    }
-
-    private static WiresShape[] toArray(final Collection<WiresShape> shapes)
-    {
+    private static WiresShape[] toArray(final Collection<WiresShape> shapes) {
         return shapes.toArray(new WiresShape[shapes.size()]);
     }
 }

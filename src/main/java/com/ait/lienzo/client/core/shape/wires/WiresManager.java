@@ -25,6 +25,8 @@ import com.ait.lienzo.client.core.shape.Group;
 import com.ait.lienzo.client.core.shape.Layer;
 import com.ait.lienzo.client.core.shape.wires.event.WiresResizeEndEvent;
 import com.ait.lienzo.client.core.shape.wires.event.WiresResizeEndHandler;
+import com.ait.lienzo.client.core.shape.wires.event.WiresResizeStartEvent;
+import com.ait.lienzo.client.core.shape.wires.event.WiresResizeStartHandler;
 import com.ait.lienzo.client.core.shape.wires.handlers.AlignAndDistributeControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorHandler;
@@ -196,40 +198,61 @@ public final class WiresManager
                                          getControlFactory().newShapeHighlight(this),
                                          this);
 
-        if (addIntoIndex)
-        {
-            // Shapes added to the align and distribute index.
-            handler.getControl().setAlignAndDistributeControl(addToIndex(shape));
-
-            shape.addWiresResizeEndHandler(new WiresResizeEndHandler()
-            {
-                @Override
-                public void onShapeResizeEnd(final WiresResizeEndEvent event)
-                {
-                    removeFromIndex(shape);
-
-                    handler.getControl().setAlignAndDistributeControl(addToIndex(shape));
-                }
-            });
-        }
         final HandlerRegistrationManager registrationManager = createHandlerRegistrationManager();
 
+        addWiresShapeHandler(shape, registrationManager, handler);
+
+        if (addIntoIndex)
+        {
+            addAlignAndDistributeHandlers(shape, handler, registrationManager);
+        }
+
+        // Shapes added to the canvas layer by default.
+        getLayer().add(shape);
+
+
+        final String uuid = shape.uuid();
+        m_shapesMap.put(uuid, shape);
+        m_shapeHandlersMap.put(uuid, registrationManager);
+
+        return handler.getControl();
+    }
+
+    private void addAlignAndDistributeHandlers(final WiresShape shape, final WiresShapeHandler handler, final HandlerRegistrationManager registrationManager)
+    {
+        // Shapes added to the align and distribute index.
+        // Treat a resize like a drag.
+        // Except right now we cannot A&D during steps (TODO)
+        final AlignAndDistributeControl alignAndDistrControl = addToIndex(shape);
+        handler.getControl().setAlignAndDistributeControl(alignAndDistrControl);
+
+        registrationManager.register(shape.addWiresResizeStartHandler(new WiresResizeStartHandler()
+        {
+            @Override public void onShapeResizeStart(final WiresResizeStartEvent event)
+            {
+                alignAndDistrControl.dragStart();
+            }
+        }));
+
+        registrationManager.register(shape.addWiresResizeEndHandler(new WiresResizeEndHandler()
+        {
+            @Override
+            public void onShapeResizeEnd(WiresResizeEndEvent event)
+            {
+                alignAndDistrControl.dragEnd();
+            }
+        }));
+    }
+
+    public static void addWiresShapeHandler(final WiresShape shape,
+                                            final HandlerRegistrationManager registrationManager,
+                                            final WiresShapeHandler handler)
+    {
         registrationManager.register(shape.getGroup().addNodeMouseClickHandler(handler));
         registrationManager.register(shape.getGroup().addNodeMouseDownHandler(handler));
         registrationManager.register(shape.getGroup().addNodeMouseUpHandler(handler));
         registrationManager.register(shape.getGroup().addNodeDragEndHandler(handler));
         shape.getGroup().setDragConstraints(handler);
-
-        // Shapes added to the canvas layer by default.
-        getLayer().add(shape);
-
-        final String uuid = shape.uuid();
-
-        m_shapesMap.put(uuid, shape);
-
-        m_shapeHandlersMap.put(uuid, registrationManager);
-
-        return handler.getControl();
     }
 
     public void deregister(final WiresShape shape)
@@ -344,7 +367,7 @@ public final class WiresManager
 
     private AlignAndDistributeControl addToIndex(final WiresShape shape)
     {
-        return m_index.addShape(shape.getGroup());
+        return m_index.addShape(shape.getGroup(), false);
     }
 
     private void removeFromIndex(final WiresShape shape)
