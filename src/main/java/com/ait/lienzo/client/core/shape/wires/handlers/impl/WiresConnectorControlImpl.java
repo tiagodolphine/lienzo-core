@@ -6,8 +6,8 @@ import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartHandler;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
+import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator.ShapeState;
 import com.ait.lienzo.client.core.shape.decorator.PointHandleDecorator;
-import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator;
 import com.ait.lienzo.client.core.shape.wires.IControlHandle;
 import com.ait.lienzo.client.core.shape.wires.IControlHandleList;
 import com.ait.lienzo.client.core.shape.wires.IControlPointsAcceptor;
@@ -284,14 +284,18 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
 
             final WiresControlPointHandler controlPointsHandler =
                     m_wiresManager.getWiresHandlerFactory().newControlPointHandler(m_connector, m_wiresManager);
-
-            for (IControlHandle handle : m_connector.getPointHandles()) {
+            final ControlPointDecoratorHandler controlHandleDecoratorHandler = new ControlPointDecoratorHandler();
+            for (int i = 1; i < m_connector.getPointHandles().size() - 1; i++) {
+                final IControlHandle handle = m_connector.getPointHandles().getHandle(i);
                 final Shape<?> shape = handle.getControl().asShape();
                 m_HandlerRegistrationManager.register(shape.addNodeMouseClickHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeMouseDoubleClickHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeDragStartHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeDragEndHandler(controlPointsHandler));
                 m_HandlerRegistrationManager.register(shape.addNodeDragMoveHandler(controlPointsHandler));
+                m_HandlerRegistrationManager.register(shape.addNodeDragStartHandler(controlHandleDecoratorHandler));
+                m_HandlerRegistrationManager.register(shape.addNodeDragEndHandler(controlHandleDecoratorHandler));
+                m_pointHandleDecorator.decorate(shape, ShapeState.VALID);
                 //enforce drag constraints on the point handles
                 shape.setDragConstraints(new DefaultDragConstraintEnforcer());
                 shape.setDragBounds(m_connector.getGroup().getDragBounds());
@@ -302,7 +306,7 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
                                                                           true,
                                                                           m_wiresManager);
             Shape<?> head = m_connector.getHeadConnection().getControl().asShape();
-            ConnectionHandler headConnectionHandler = new ConnectionHandler(m_headConnectionControl, head);
+            ConnectionHandler headConnectionHandler = new ConnectionHandler(m_headConnectionControl, head, m_connector.getHeadConnection());
             head.setDragConstraints(headConnectionHandler);
             m_HandlerRegistrationManager.register(head.addNodeDragEndHandler(headConnectionHandler));
 
@@ -311,27 +315,9 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
                                                                           false,
                                                                           m_wiresManager);
             Shape<?> tail = m_connector.getTailConnection().getControl().asShape();
-            ConnectionHandler tailConnectionHandler = new ConnectionHandler(m_tailConnectionControl, tail);
+            ConnectionHandler tailConnectionHandler = new ConnectionHandler(m_tailConnectionControl, tail, m_connector.getTailConnection());
             tail.setDragConstraints(tailConnectionHandler);
             m_HandlerRegistrationManager.register(tail.addNodeDragEndHandler(tailConnectionHandler));
-
-            final WiresControlPointHandler controlPointsHandler =
-                    m_wiresManager.getWiresHandlerFactory().newControlPointHandler(m_connector, m_wiresManager);
-
-            ControlPointDecoratorHandler controlHandleDecoratorHandler = new ControlPointDecoratorHandler();
-
-            for(int i=1;i<m_connector.getPointHandles().size() -1;i++){
-                final IControlHandle handle = m_connector.getPointHandles().getHandle(i);
-                final Shape<?> shape = handle.getControl().asShape();
-                m_HandlerRegistrationManager.register(shape.addNodeMouseClickHandler(controlPointsHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeMouseDoubleClickHandler(controlPointsHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeDragStartHandler(controlPointsHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeDragEndHandler(controlPointsHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeDragMoveHandler(controlPointsHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeDragStartHandler(controlHandleDecoratorHandler));
-                m_HandlerRegistrationManager.register(shape.addNodeDragEndHandler(controlHandleDecoratorHandler));
-                m_pointHandleDecorator.decorate(shape, IShapeDecorator.ShapeState.VALID);
-            }
         }
     }
 
@@ -350,42 +336,43 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
 
         @Override
         public void onNodeDragStart(NodeDragStartEvent event) {
-            decorateShape(event.getDragContext(), IShapeDecorator.ShapeState.INVALID);
+            decorateShape(event.getDragContext(), ShapeState.INVALID);
         }
 
         @Override
         public void onNodeDragEnd(NodeDragEndEvent event) {
-            decorateShape(event.getDragContext(), IShapeDecorator.ShapeState.VALID);
+            decorateShape(event.getDragContext(), ShapeState.VALID);
         }
 
-        private void decorateShape(DragContext dragContext, IShapeDecorator.ShapeState state) {
+        private void decorateShape(DragContext dragContext, ShapeState state) {
             final Shape node = (Shape) dragContext.getNode();
             m_pointHandleDecorator.decorate(node, state);
         }
     }
 
-    private final class ConnectionHandler implements DragConstraintEnforcer,
+    protected final class ConnectionHandler implements DragConstraintEnforcer,
                                                      NodeDragEndHandler {
         private final WiresConnectionControl connectionControl;
-        private Shape<?> shape;
-        private boolean connected;
+        private final Shape<?> shape;
+        private final WiresConnection connection;
 
-        private ConnectionHandler(final WiresConnectionControl connectionControl, Shape<?> shape) {
+        private ConnectionHandler(final WiresConnectionControl connectionControl, Shape<?> shape, WiresConnection connection) {
             this.connectionControl = connectionControl;
             this.shape = shape;
-            m_pointHandleDecorator.decorate(shape, IShapeDecorator.ShapeState.VALID);
+            this.connection = connection;
+            m_pointHandleDecorator.decorate(shape, ShapeState.VALID);
         }
 
         @Override
         public void startDrag(final DragContext dragContext) {
             connectionControl.onMoveStart(dragContext.getDragStartX(),
                                           dragContext.getDragStartY());
-            m_pointHandleDecorator.decorate(this.shape, IShapeDecorator.ShapeState.INVALID);
+            m_pointHandleDecorator.decorate(this.shape, ShapeState.INVALID);
         }
 
         @Override
         public boolean adjust(final Point2D dxy) {
-            connected = false;
+            boolean adjusted = false;
             if (connectionControl.onMove(dxy.getX(),
                                          dxy.getY())) {
                 // Check if need for drag adjustments.
@@ -393,11 +380,11 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
                 if (!adjustPoint.equals(new Point2D(0,
                                                     0))) {
                     dxy.set(adjustPoint);
-                    connected = true;
+                    adjusted = true;
                 }
             }
-            m_pointHandleDecorator.decorate(shape, connected ? IShapeDecorator.ShapeState.VALID : IShapeDecorator.ShapeState.INVALID);
-            return connected;
+            m_pointHandleDecorator.decorate(shape, adjusted ? ShapeState.VALID : ShapeState.INVALID);
+            return adjusted;
         }
 
         @Override
@@ -408,7 +395,10 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
             if (!allowed) {
                 event.getDragContext().reset();
             }
-            m_pointHandleDecorator.decorate(shape, connected ? IShapeDecorator.ShapeState.VALID : IShapeDecorator.ShapeState.INVALID);
+            //decorate connection shape
+            final ShapeState shapeState = (connection.isAutoConnection() || connection.getMagnet() != null ?
+                    ShapeState.VALID : ShapeState.INVALID);
+            m_pointHandleDecorator.decorate(shape, shapeState);
         }
     }
 
