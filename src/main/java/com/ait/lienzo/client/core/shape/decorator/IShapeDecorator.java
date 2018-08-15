@@ -18,6 +18,11 @@ package com.ait.lienzo.client.core.shape.decorator;
 
 import com.ait.lienzo.client.core.shape.Shape;
 
+/**
+ * This interface is used when it is necessary to change the style of a given {@link Shape} according to some
+ * state represented by {@link ShapeState}.
+ * @param <S>
+ */
 public interface IShapeDecorator<S extends Shape<?>> {
 
     enum ShapeState{

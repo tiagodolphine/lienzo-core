@@ -17,7 +17,11 @@
 package com.ait.lienzo.client.core.shape.decorator;
 
 import com.ait.lienzo.client.core.shape.Shape;
+import com.ait.lienzo.client.core.shape.wires.MagnetManager;
 
+/**
+ * Changes the style of a {@link MagnetManager.Magnets} shape, according to a given {@link ShapeState}.
+ */
 public class MagnetDecorator implements IShapeDecorator<Shape<?>> {
 
     @Override

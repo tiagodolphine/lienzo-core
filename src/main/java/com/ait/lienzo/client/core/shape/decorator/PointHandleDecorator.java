@@ -17,8 +17,13 @@
 package com.ait.lienzo.client.core.shape.decorator;
 
 import com.ait.lienzo.client.core.shape.Shape;
+import com.ait.lienzo.client.core.shape.wires.MagnetManager;
+import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.shared.core.types.ColorName;
 
+/**
+ * Changes the style of connector point handles {@link WiresConnector#getPointHandles()} shapes, according to a given {@link ShapeState}.
+ */
 public class PointHandleDecorator implements IShapeDecorator<Shape<?>> {
 
     public static final String MAIN_COLOR = ColorName.DARKRED.getHexColor();
