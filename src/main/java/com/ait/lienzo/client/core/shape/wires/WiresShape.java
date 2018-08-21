@@ -19,6 +19,7 @@ package com.ait.lienzo.client.core.shape.wires;
 import java.util.Map;
 import java.util.Objects;
 
+import com.ait.lienzo.client.core.event.IAttributesChangedBatcher;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.MultiPath;
 import com.ait.lienzo.client.core.shape.wires.IControlHandle.ControlHandleType;
@@ -34,6 +35,8 @@ import com.ait.lienzo.client.core.shape.wires.handlers.WiresShapeControl;
 import com.ait.lienzo.client.core.types.BoundingBox;
 import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.shared.core.types.EventPropagationMode;
+import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
+import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.ait.lienzo.client.core.shape.wires.IControlHandle.ControlHandleType;
 
@@ -76,6 +79,14 @@ public class WiresShape extends WiresContainer
         final BoundingBox box = m_path.refresh().getBoundingBox();
 
         m_innerLayoutContainer.setOffset(new Point2D(box.getX(), box.getY())).setSize(box.getWidth(), box.getHeight()).execute();
+    }
+
+    WiresShape(final MultiPath path, final LayoutContainer layoutContainer, final HandlerManager manager, final HandlerRegistrationManager registrationManager, final IAttributesChangedBatcher attributesChangedBatcher)
+    {
+        super(layoutContainer.getGroup(), manager, registrationManager, attributesChangedBatcher);
+        this.m_path = path;
+        this.m_ctrls = null;
+        this.m_innerLayoutContainer = layoutContainer;
     }
 
     @Override
