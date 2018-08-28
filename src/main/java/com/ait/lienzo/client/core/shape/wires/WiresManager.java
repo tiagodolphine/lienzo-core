@@ -50,7 +50,7 @@ public final class WiresManager
 
     private static final NFastStringMap<WiresManager>        MANAGER_MAP           = new NFastStringMap<WiresManager>();
 
-    public static final int CONNECTOR_SELECTION_OFFSET = WiresConnector.MINIMUM_STROKE_WITH;
+    public static final int CONNECTOR_SELECTION_OFFSET =     5;
 
     private final MagnetManager                              m_magnetManager       = new MagnetManager();
 
@@ -282,9 +282,12 @@ public final class WiresManager
         m_registrationManager.register(connector.getGroup().addNodeDragStartHandler(handler));
         m_registrationManager.register(connector.getGroup().addNodeDragMoveHandler(handler));
         m_registrationManager.register(connector.getGroup().addNodeDragEndHandler(handler));
+
         m_registrationManager.register(connector.getLine().addNodeMouseClickHandler(handler));
-        m_registrationManager.register(connector.getLine().addNodeMouseDoubleClickHandler(handler));
-        m_registrationManager.register(connector.getLine().addNodeMouseDownHandler(handler));
+        m_registrationManager.register(connector.getLine().addNodeMouseEnterHandler(handler));
+        m_registrationManager.register(connector.getLine().addNodeMouseMoveHandler(handler));
+        m_registrationManager.register(connector.getLine().addNodeMouseExitHandler(handler));
+
         m_registrationManager.register(connector.getHead().addNodeMouseClickHandler(handler));
         m_registrationManager.register(connector.getTail().addNodeMouseClickHandler(handler));
 

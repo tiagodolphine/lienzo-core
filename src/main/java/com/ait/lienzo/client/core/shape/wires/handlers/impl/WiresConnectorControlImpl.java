@@ -405,7 +405,6 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
     private void refreshControlPoints() {
         hideControlPoints();
         showPointHandles();
-        batch();
     }
 
     private void batch() {

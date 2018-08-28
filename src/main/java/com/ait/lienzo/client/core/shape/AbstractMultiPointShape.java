@@ -118,11 +118,11 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
         return super.refresh();
     }
 
-    private static final class DefaultMultiPointShapeHandleFactory implements IControlHandleFactory
+    public static final class DefaultMultiPointShapeHandleFactory implements IControlHandleFactory
     {
-        private static final double              R0                 = 6;
+        public static final double              R0                  = 6;
 
-        private static final double              R1                 = 10;
+        public static final double              R1                  = 10;
 
         private static final double              ANIMATION_DURATION = 100;
 
@@ -194,6 +194,7 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
                 prim.setSelectionStrokeOffset(R1);
                 prim.setSelectionBoundsOffset(R1);
+                prim.setFillBoundsForSelection(true);
 
                 chlist.add(new AbstractPointControlHandle()
                 {
