@@ -1,11 +1,18 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragEndHandler;
 import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartHandler;
+import com.ait.lienzo.client.core.event.NodeMouseDownEvent;
+import com.ait.lienzo.client.core.event.NodeMouseDownHandler;
+import com.ait.lienzo.client.core.shape.Circle;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
+import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator;
 import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator.ShapeState;
 import com.ait.lienzo.client.core.shape.decorator.PointHandleDecorator;
 import com.ait.lienzo.client.core.shape.wires.IControlHandle;
@@ -22,8 +29,13 @@ import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.widget.DefaultDragConstraintEnforcer;
 import com.ait.lienzo.client.widget.DragConstraintEnforcer;
 import com.ait.lienzo.client.widget.DragContext;
+import com.ait.tooling.common.api.java.util.function.Consumer;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArray;
 import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
+import com.google.gwt.event.shared.HandlerRegistration;
+
+import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.R0;
+import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.SELECTION_OFFSET;
 
 /**
  * This class can be a little confusing, due to the way that drag works.
@@ -48,12 +60,15 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
     private WiresConnectionControl m_headConnectionControl;
     private WiresConnectionControl m_tailConnectionControl;
     private PointHandleDecorator m_pointHandleDecorator;
+    private Shape<?> transientControlHandle;
+    private final Collection<HandlerRegistration> transientControlHandleRegistrations;
 
     public WiresConnectorControlImpl(final WiresConnector connector,
                                      final WiresManager wiresManager) {
         this.m_connector = connector;
         this.m_wiresManager = wiresManager;
         this.m_pointHandleDecorator = new PointHandleDecorator();
+        this.transientControlHandleRegistrations = new ArrayList<>();
     }
 
     @Override
@@ -299,6 +314,7 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
                 //enforce drag constraints on the point handles
                 shape.setDragConstraints(new DefaultDragConstraintEnforcer());
                 shape.setDragBounds(m_connector.getGroup().getDragBounds());
+                shape.moveToTop();
             }
 
             m_headConnectionControl = m_wiresManager.getControlFactory()
@@ -329,6 +345,7 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
             m_tailConnectionControl = null;
         }
         m_connector.destroyPointHandles();
+        destroyTransientControlHandle();
     }
 
     protected final class ControlPointDecoratorHandler implements NodeDragStartHandler,
@@ -429,5 +446,52 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
 
     public void setPointHandleDecorator(PointHandleDecorator pointHandleDecorator) {
         this.m_pointHandleDecorator = pointHandleDecorator;
+    }
+
+    @Override
+    public Shape<?> createTransientControlHandle(final Consumer<Point2D> addControlHandleConsumer) {
+        final Shape<?> pointHandleShape = new Circle(R0);
+        m_pointHandleDecorator.decorate(pointHandleShape, IShapeDecorator.ShapeState.INVALID);
+        //increase the selection area to make it easier do drag
+        pointHandleShape.getAttributes().setSelectionBoundsOffset(SELECTION_OFFSET);
+        pointHandleShape.getAttributes().setSelectionStrokeOffset(SELECTION_OFFSET);
+        pointHandleShape.setFillBoundsForSelection(true);
+
+        //adding the handlers on the transient control handle
+        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseDownHandler(new NodeMouseDownHandler() {
+            @Override
+            public void onNodeMouseDown(NodeMouseDownEvent event) {
+                addControlHandleConsumer.accept(new Point2D(event.getX(), event.getY()));
+            }
+        }));
+
+        //add the shape on the connector line
+        m_connector.getLine().getLayer().add(pointHandleShape);
+
+        this.transientControlHandle = pointHandleShape;
+        return pointHandleShape;
+    }
+
+    @Override
+    public void destroyTransientControlHandle() {
+        if (transientControlHandle != null) {
+            transientControlHandle.removeFromParent();
+            transientControlHandle = null;
+
+            for (HandlerRegistration registration : transientControlHandleRegistrations) {
+                registration.removeHandler();
+            }
+            transientControlHandleRegistrations.clear();
+            batchConnector();
+        }
+    }
+
+    @Override
+    public Shape<?> getTransientControlHandle() {
+        return transientControlHandle;
+    }
+
+    private void batchConnector() {
+        m_connector.getLine().getLayer().batch();
     }
 }

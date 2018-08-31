@@ -124,7 +124,9 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
         public static final double              R1                  = 10;
 
-        private static final double              ANIMATION_DURATION = 100;
+        public static final double              SELECTION_OFFSET    = R1 * 2;
+
+        private static final double             ANIMATION_DURATION  = 100;
 
         private final AbstractMultiPointShape<?> m_shape;
 
@@ -192,8 +194,8 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
                 final Circle prim = new Circle(R0).setX(m_shape.getX() + p.getX()).setY(m_shape.getY() + p.getY()).setFillColor(ColorName.DARKRED).setFillAlpha(0.8).setStrokeAlpha(0).setDraggable(true).setDragMode(m_dmode);
 
-                prim.setSelectionStrokeOffset(R1);
-                prim.setSelectionBoundsOffset(R1);
+                prim.setSelectionStrokeOffset(SELECTION_OFFSET);
+                prim.setSelectionBoundsOffset(SELECTION_OFFSET);
                 prim.setFillBoundsForSelection(true);
 
                 chlist.add(new AbstractPointControlHandle()

@@ -1,29 +1,20 @@
 package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragMoveEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeMouseClickEvent;
 import com.ait.lienzo.client.core.event.NodeMouseDownEvent;
-import com.ait.lienzo.client.core.event.NodeMouseDownHandler;
-import com.ait.lienzo.client.core.event.NodeMouseEnterEvent;
-import com.ait.lienzo.client.core.event.NodeMouseExitEvent;
 import com.ait.lienzo.client.core.event.NodeMouseMoveEvent;
-import com.ait.lienzo.client.core.event.NodeMouseMoveHandler;
-import com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory;
-import com.ait.lienzo.client.core.shape.Circle;
 import com.ait.lienzo.client.core.shape.Shape;
-import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator;
-import com.ait.lienzo.client.core.shape.decorator.PointHandleDecorator;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorHandler;
+import com.ait.lienzo.client.core.types.Point2D;
+import com.ait.lienzo.client.core.types.Point2DArray;
+import com.ait.lienzo.client.core.util.Geometry;
 import com.ait.tooling.common.api.java.util.function.Consumer;
-import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.Timer;
 
 public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
@@ -34,11 +25,6 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     private final Consumer<Event> mouseDownEventConsumer;
     private Timer clickTimer;
     private Event event;
-    private PointHandleDecorator pointHandleDecorator;
-
-    private Shape<?> transientControlHandle;
-    private Timer destroyTransientControlHandleTimer;
-    private final Collection<HandlerRegistration> transientControlHandleRegistrations = new ArrayList<>();
 
     public static class Event {
         final double x;
@@ -60,17 +46,15 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
         final WiresConnectorEventConsumers consumers = new WiresConnectorEventConsumers(connector);
         return new WiresConnectorHandlerImpl(connector,
                                              wiresManager,
-                                             new PointHandleDecorator(),
                                              consumers.switchVisibility(),
                                              consumers.addControlPoint());
     }
 
     public WiresConnectorHandlerImpl(final WiresConnector connector,
                                      final WiresManager wiresManager,
-                                     final PointHandleDecorator pointHandleDecorator,
                                      final Consumer<Event> clickEventConsumer,
                                      final Consumer<Event> mouseDownEventConsumer) {
-        this(connector, wiresManager, pointHandleDecorator, clickEventConsumer, mouseDownEventConsumer, null);
+        this(connector, wiresManager, clickEventConsumer, mouseDownEventConsumer, null);
 
         this.clickTimer = new Timer() {
             @Override
@@ -87,13 +71,11 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
 
     WiresConnectorHandlerImpl(final WiresConnector connector,
                               final WiresManager wiresManager,
-                              final PointHandleDecorator pointHandleDecorator,
                               final Consumer<Event> clickEventConsumer,
                               final Consumer<Event> mouseDownEventConsumer,
                               final Timer clickTimer) {
         this.m_connector = connector;
         this.m_wiresManager = wiresManager;
-        this.pointHandleDecorator = pointHandleDecorator;
         this.clickEventConsumer = clickEventConsumer;
         this.mouseDownEventConsumer = mouseDownEventConsumer;
         this.clickTimer = clickTimer;
@@ -183,66 +165,15 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     }
 
     @Override
-    public void onNodeMouseEnter(NodeMouseEnterEvent event) {
-        cancelDestroyTransientControlHandleTimer();
+    public void onNodeMouseDown(NodeMouseDownEvent event) {
+        addControlPoint(new Point2D(event.getX(), event.getY()));
     }
 
-    private void cancelDestroyTransientControlHandleTimer() {
-        if(destroyTransientControlHandleTimer != null) {
-            destroyTransientControlHandleTimer.cancel();
+    private void addControlPoint(Point2D point) {
+        getControl().destroyTransientControlHandle();
+        if(getControl().areControlPointsVisible()) {
+            mouseDownEventConsumer.accept(new Event(point.getX(), point.getY(), false));
         }
-    }
-
-    private Shape<?> createTransientControlHandle() {
-        final Shape<?> pointHandleShape = new Circle(DefaultMultiPointShapeHandleFactory.R0);
-        pointHandleDecorator.decorate(pointHandleShape, IShapeDecorator.ShapeState.INVALID);
-        //increase the selection area to make it easier do drag
-        pointHandleShape.getAttributes().setSelectionBoundsOffset(30);
-        pointHandleShape.getAttributes().setSelectionStrokeOffset(30);
-        pointHandleShape.setFillBoundsForSelection(true);
-
-        //adding the handlers on the transient control handle
-        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseDownHandler(new NodeMouseDownHandler() {
-            @Override
-            public void onNodeMouseDown(NodeMouseDownEvent event) {
-                if(getControl().areControlPointsVisible()) {
-                    mouseDownEventConsumer.accept(new Event(event.getX(), event.getY(), event.isShiftKeyDown()));
-                    destroyTransientControlHandle();
-                }
-            }
-        }));
-
-        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseMoveHandler(new NodeMouseMoveHandler() {
-            @Override
-            public void onNodeMouseMove(NodeMouseMoveEvent event) {
-                cancelDestroyTransientControlHandleTimer();
-            }
-        }));
-
-        //same handlers as the connector
-        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseEnterHandler(this));
-        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseExitHandler(this));
-
-        return pointHandleShape;
-    }
-
-    @Override
-    public void onNodeMouseExit(NodeMouseExitEvent event) {
-        if(transientControlHandle == null){
-            return;
-        }
-
-        cancelDestroyTransientControlHandleTimer();
-
-        destroyTransientControlHandleTimer = new Timer() {
-                @Override
-                public void run() {
-                    destroyTransientControlHandle();
-                    batchConnector();
-                }
-            };
-
-        destroyTransientControlHandleTimer.schedule(5);
     }
 
     @Override
@@ -251,43 +182,35 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
             return;
         }
 
-        if (destroyTransientControlHandleTimer != null) {
-            destroyTransientControlHandleTimer.cancel();
+        Point2D nearestMouse = Geometry.findClosestPointOnLine(event.getX(), event.getY(), getConnector().getLine().getPoint2DArray(), 10);
+        if(nearestMouse == null){
+            getControl().destroyTransientControlHandle();
+            return;
         }
 
+        double distance = Geometry.distance(event.getX(), event.getY(), nearestMouse.getX(), nearestMouse.getY());
+        if(distance > 30){
+            getControl().destroyTransientControlHandle();
+            return;
+        }
+
+        Shape<?> transientControlHandle = getControl().getTransientControlHandle();
         if (transientControlHandle == null) {
-            transientControlHandle = createTransientControlHandle();
-        }
-
-        if(transientControlHandle.getParent() == null) {
-            //add the shape on the connector line
-            getConnector().getLine().getLayer().add(transientControlHandle);
+            transientControlHandle = getControl().createTransientControlHandle(new Consumer<Point2D>() {
+                @Override
+                public void accept(Point2D point2D) {
+                    addControlPoint(point2D);
+                }
+            });
         }
 
         //setting current position
-        transientControlHandle.setX(event.getX()).setY(event.getY());
+        transientControlHandle.setX(nearestMouse.getX()).setY(nearestMouse.getY());
 
         batchConnector();
     }
 
-    private void destroyTransientControlHandle() {
-        if (transientControlHandle != null && getControl().areControlPointsVisible()) {
-            transientControlHandle.removeFromParent();
-            transientControlHandle = null;
-
-            for (HandlerRegistration registration : transientControlHandleRegistrations) {
-                registration.removeHandler();
-            }
-            transientControlHandleRegistrations.clear();
-        }
-    }
-
     private void batchConnector() {
-        getConnector().getLine().getLayer().batch();
+        m_connector.getLine().getLayer().batch();
     }
-
-    protected Shape<?> getTransientControlHandle() {
-        return transientControlHandle;
-    }
-
 }
