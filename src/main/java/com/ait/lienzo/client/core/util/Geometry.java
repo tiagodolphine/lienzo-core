@@ -1732,20 +1732,16 @@ public final class Geometry
      * @param x reference point x
      * @param y reference point y
      * @param linePoints points of segments that compose the line
-     * @param offsetFromPoints an offset to disconsider points close to @param linePoints
      * @return
      */
-    public static Point2D findClosestPointOnLine(double x, double y, Point2DArray linePoints, double offsetFromPoints) {
+    public static Point2D findClosestPointOnLine(double x, double y, Point2DArray linePoints) {
         Double lowestDistance = null;
         Point2D nearstPoint = null;
         for (int i = 0; i < linePoints.size() - 1; i++) {
             Point2D start = linePoints.get(i);
             Point2D end = linePoints.get(i + 1);
             Point2D point = findClosestPointOnLine(x, y, start, end);
-            if (point == null
-                    || (Geometry.distance(point.getX(), point.getY(), start.getX(), start.getY()) < offsetFromPoints)
-                    || (Geometry.distance(point.getX(), point.getY(), end.getX(), end.getY()) < offsetFromPoints)
-                    ) {
+            if (point == null) {
                 continue;
             }
             double distance = Geometry.distance(point.getX(), point.getY(), x, y);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ait.lienzo.client.core.shape.decorator;
+package com.ait.lienzo.client.core.shape.wires.decorator;
 
 import com.ait.lienzo.client.core.shape.Shape;
 

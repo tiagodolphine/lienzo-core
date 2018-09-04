@@ -21,8 +21,7 @@ public interface WiresConnectorHandler extends NodeDragStartHandler,
                                                NodeDragMoveHandler,
                                                NodeDragEndHandler,
                                                NodeMouseClickHandler,
-                                               NodeMouseMoveHandler,
-                                               NodeMouseDownHandler {
+                                               NodeMouseMoveHandler {
 
     WiresConnectorControl getControl();
 }

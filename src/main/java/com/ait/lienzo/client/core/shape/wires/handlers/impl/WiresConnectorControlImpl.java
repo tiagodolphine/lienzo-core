@@ -3,24 +3,29 @@ package com.ait.lienzo.client.core.shape.wires.handlers.impl;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import com.ait.lienzo.client.core.animation.AnimationProperties;
+import com.ait.lienzo.client.core.animation.AnimationProperty;
+import com.ait.lienzo.client.core.animation.AnimationTweener;
 import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragEndHandler;
 import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartHandler;
+import com.ait.lienzo.client.core.event.NodeMouseClickEvent;
+import com.ait.lienzo.client.core.event.NodeMouseClickHandler;
 import com.ait.lienzo.client.core.event.NodeMouseDownEvent;
 import com.ait.lienzo.client.core.event.NodeMouseDownHandler;
 import com.ait.lienzo.client.core.shape.Circle;
 import com.ait.lienzo.client.core.shape.IPrimitive;
 import com.ait.lienzo.client.core.shape.Shape;
-import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator;
-import com.ait.lienzo.client.core.shape.decorator.IShapeDecorator.ShapeState;
-import com.ait.lienzo.client.core.shape.decorator.PointHandleDecorator;
 import com.ait.lienzo.client.core.shape.wires.IControlHandle;
 import com.ait.lienzo.client.core.shape.wires.IControlHandleList;
 import com.ait.lienzo.client.core.shape.wires.IControlPointsAcceptor;
 import com.ait.lienzo.client.core.shape.wires.WiresConnection;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
+import com.ait.lienzo.client.core.shape.wires.decorator.IShapeDecorator;
+import com.ait.lienzo.client.core.shape.wires.decorator.IShapeDecorator.ShapeState;
+import com.ait.lienzo.client.core.shape.wires.decorator.PointHandleDecorator;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectionControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresControlPointHandler;
@@ -33,8 +38,10 @@ import com.ait.tooling.common.api.java.util.function.Consumer;
 import com.ait.tooling.nativetools.client.collection.NFastDoubleArray;
 import com.ait.tooling.nativetools.client.event.HandlerRegistrationManager;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.user.client.Timer;
 
 import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.R0;
+import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.R1;
 import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.SELECTION_OFFSET;
 
 /**
@@ -62,6 +69,7 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
     private PointHandleDecorator m_pointHandleDecorator;
     private Shape<?> transientControlHandle;
     private final Collection<HandlerRegistration> transientControlHandleRegistrations;
+    private AddControlPointTimer addControlPointTimer;
 
     public WiresConnectorControlImpl(final WiresConnector connector,
                                      final WiresManager wiresManager) {
@@ -448,6 +456,27 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
         this.m_pointHandleDecorator = pointHandleDecorator;
     }
 
+    /**
+     * Timer class responsible to delay simulating a long press when click + drag to add a new
+     * control point. Besides that the delay is necessary to preserve the selection on connector
+     * when there is only a click, in this case this time should be cancelled.
+     */
+    protected class AddControlPointTimer extends Timer {
+
+        Consumer<Point2D> addControlHandleConsumer;
+        Point2D point;
+
+        public AddControlPointTimer(Consumer<Point2D> addControlHandleConsumer, Point2D point) {
+            this.addControlHandleConsumer = addControlHandleConsumer;
+            this.point = point;
+        }
+
+        @Override
+        public void run() {
+            addControlHandleConsumer.accept(point);
+        }
+    }
+
     @Override
     public Shape<?> createTransientControlHandle(final Consumer<Point2D> addControlHandleConsumer) {
         final Shape<?> pointHandleShape = new Circle(R0);
@@ -461,7 +490,24 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
         transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseDownHandler(new NodeMouseDownHandler() {
             @Override
             public void onNodeMouseDown(NodeMouseDownEvent event) {
-                addControlHandleConsumer.accept(new Point2D(event.getX(), event.getY()));
+                if(addControlPointTimer == null){
+                    addControlPointTimer = createAddControlPointTimer(new Point2D(event.getX(), event.getY()), addControlHandleConsumer);
+                    addControlPointTimer.schedule(150);
+                    event.preventDefault();
+                }
+            }
+        }));
+
+        transientControlHandleRegistrations.add(pointHandleShape.addNodeMouseClickHandler(new NodeMouseClickHandler() {
+            @Override
+            public void onNodeMouseClick(NodeMouseClickEvent event) {
+                if(addControlPointTimer != null){
+                    //when clicking then cancel the add connector action and fire the click on the connector line
+                    addControlPointTimer.cancel();
+                    addControlPointTimer = null;
+                    event.preventDefault();
+                    m_connector.getLine().fireEvent(event);
+                }
             }
         }));
 
@@ -472,18 +518,22 @@ public class WiresConnectorControlImpl implements WiresConnectorControl {
         return pointHandleShape;
     }
 
+    protected AddControlPointTimer createAddControlPointTimer(Point2D point, Consumer<Point2D> addControlHandleConsumer) {
+        return new AddControlPointTimer(addControlHandleConsumer, point);
+    }
+
     @Override
     public void destroyTransientControlHandle() {
+        for (HandlerRegistration registration : transientControlHandleRegistrations) {
+            registration.removeHandler();
+        }
+        transientControlHandleRegistrations.clear();
         if (transientControlHandle != null) {
             transientControlHandle.removeFromParent();
             transientControlHandle = null;
-
-            for (HandlerRegistration registration : transientControlHandleRegistrations) {
-                registration.removeHandler();
-            }
-            transientControlHandleRegistrations.clear();
             batchConnector();
         }
+        addControlPointTimer = null;
     }
 
     @Override

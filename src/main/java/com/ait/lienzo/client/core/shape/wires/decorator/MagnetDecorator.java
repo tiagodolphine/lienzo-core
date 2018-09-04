@@ -14,34 +14,26 @@
  * limitations under the License.
  */
 
-package com.ait.lienzo.client.core.shape.decorator;
+package com.ait.lienzo.client.core.shape.wires.decorator;
 
 import com.ait.lienzo.client.core.shape.Shape;
 import com.ait.lienzo.client.core.shape.wires.MagnetManager;
-import com.ait.lienzo.client.core.shape.wires.WiresConnector;
-import com.ait.lienzo.shared.core.types.ColorName;
 
 /**
- * Changes the style of connector point handles {@link WiresConnector#getPointHandles()} shapes, according to a given {@link ShapeState}.
+ * Changes the style of a {@link MagnetManager.Magnets} shape, according to a given {@link ShapeState}.
  */
-public class PointHandleDecorator implements IShapeDecorator<Shape<?>> {
-
-    public static final String MAIN_COLOR = ColorName.DARKRED.getHexColor();
+public class MagnetDecorator implements IShapeDecorator<Shape<?>> {
 
     @Override
     public Shape decorate(Shape shape, ShapeState state) {
         switch (state) {
-            case NONE:
             case VALID:
-                shape.moveToTop()
-                        .setFillColor(MAIN_COLOR)
-                        .setFillAlpha(0.8)
-                        .setStrokeAlpha(0);
-                break;
             case INVALID:
-                shape.moveToTop()
-                        .setFillColor(ColorName.GREEN);
-                break;
+            case NONE:
+                shape.setFillColor(PointHandleDecorator.MAIN_COLOR)
+                        .setFillAlpha(0.8)
+                        .setStrokeAlpha(0)
+                        .moveToTop();
         }
         return shape;
     }
