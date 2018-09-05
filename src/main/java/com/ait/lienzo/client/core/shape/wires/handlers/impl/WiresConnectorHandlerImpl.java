@@ -6,10 +6,8 @@ import com.ait.lienzo.client.core.event.NodeDragEndEvent;
 import com.ait.lienzo.client.core.event.NodeDragMoveEvent;
 import com.ait.lienzo.client.core.event.NodeDragStartEvent;
 import com.ait.lienzo.client.core.event.NodeMouseClickEvent;
-import com.ait.lienzo.client.core.event.NodeMouseDownEvent;
 import com.ait.lienzo.client.core.event.NodeMouseMoveEvent;
 import com.ait.lienzo.client.core.shape.Shape;
-import com.ait.lienzo.client.core.shape.wires.IControlHandle;
 import com.ait.lienzo.client.core.shape.wires.WiresConnector;
 import com.ait.lienzo.client.core.shape.wires.WiresManager;
 import com.ait.lienzo.client.core.shape.wires.handlers.WiresConnectorControl;
@@ -19,10 +17,9 @@ import com.ait.lienzo.client.core.types.Point2D;
 import com.ait.lienzo.client.core.types.Point2DArray;
 import com.ait.lienzo.client.core.util.Geometry;
 import com.ait.tooling.common.api.java.util.function.Consumer;
-import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.user.client.Timer;
 
-import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.SELECTION_OFFSET;
+import static com.ait.lienzo.client.core.shape.AbstractMultiPointShape.DefaultMultiPointShapeHandleFactory.R1;
 
 public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
 
@@ -38,14 +35,14 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     private static AtomicBoolean transientControlHandleToken = new AtomicBoolean(false);
 
     public static class Event {
+
         final double x;
         final double y;
         final boolean isShiftKeyDown;
 
         public Event(final double x,
                      final double y,
-                     final boolean isShiftKeyDown)
-        {
+                     final boolean isShiftKeyDown) {
             this.x = x;
             this.y = y;
             this.isShiftKeyDown = isShiftKeyDown;
@@ -126,6 +123,7 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
     }
 
     public static class WiresConnectorEventConsumers {
+
         private final WiresConnector connector;
 
         public WiresConnectorEventConsumers(final WiresConnector connector) {
@@ -154,7 +152,6 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
                 }
             };
         }
-
     }
 
     public WiresConnectorControl getControl() {
@@ -191,7 +188,7 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
         //check it the closest point is overlapping or it is very close to any line point
         for (int i = 0; i < linePoints.size() - 1; i++) {
             Point2D point = linePoints.get(i);
-            if (Geometry.distance(closestPoint.getX(), closestPoint.getY(), point.getX(), point.getY()) < SELECTION_OFFSET) {
+            if (Geometry.distance(closestPoint.getX(), closestPoint.getY(), point.getX(), point.getY()) < R1) {
                 destroyTransientControlHandle();
                 return;
             }
@@ -199,19 +196,14 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
 
         //check if the closest point is too far from the current mouse location
         double distance = Geometry.distance(event.getX(), event.getY(), closestPoint.getX(), closestPoint.getY());
-        if (distance > SELECTION_OFFSET) {
+        if (distance > R1) {
             destroyTransientControlHandle();
             return;
         }
 
         Shape<?> transientControlHandle = getControl().getTransientControlHandle();
         if (transientControlHandle == null) {
-            transientControlHandle = getControl().createTransientControlHandle(new Consumer<Point2D>() {
-                @Override
-                public void accept(Point2D point2D) {
-                    addControlPoint(point2D);
-                }
-            });
+            transientControlHandle = createTransientControlHandle();
         }
 
         //setting current position
@@ -220,16 +212,35 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
         batchConnector();
     }
 
+    private Shape<?> createTransientControlHandle() {
+        if(!isSelected()){
+            getControl().showControlPoints();
+        }
+        return getControl().createTransientControlHandle(new Consumer<Point2D>() {
+            @Override
+            public void accept(Point2D point2D) {
+                addControlPoint(point2D);
+            }
+        });
+    }
+
+    private boolean isSelected() {
+        return !getWiresManager().getSelectionManager().getSelectedItems().getConnectors().isEmpty();
+    }
+
     private void destroyTransientControlHandle() {
         //release the token of the transient control handle, concurrency between connectors
         transientControlHandleToken.set(false);
         hasTransientControlHandleToken = false;
         getControl().destroyTransientControlHandle();
+        if (!isSelected()) {
+            getControl().hideControlPoints();
+        }
     }
 
     private boolean isOverConnector(double x, double y) {
         //check and get the token of the transient control handle, concurrency between connectors
-        if(transientControlHandleToken.compareAndSet(false, true)){
+        if (transientControlHandleToken.compareAndSet(false, true)) {
             hasTransientControlHandleToken = true;
         }
         //skip in case the token was not gotten
@@ -237,7 +248,7 @@ public class WiresConnectorHandlerImpl implements WiresConnectorHandler {
             return false;
         }
         //check if the connector is already selected
-        if (getControl().areControlPointsVisible()) {
+        if (isSelected()) {
             return true;
         }
         //check if the mouse is within the connector bounding box area

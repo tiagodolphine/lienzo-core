@@ -124,7 +124,7 @@ public abstract class AbstractMultiPointShape<T extends AbstractMultiPointShape<
 
         public static final double              R1                  = 10;
 
-        public static final double              SELECTION_OFFSET    = R1 * 2;
+        public static final double              SELECTION_OFFSET    = R0 * 0.5;
 
         private static final double             ANIMATION_DURATION  = 100;
 
