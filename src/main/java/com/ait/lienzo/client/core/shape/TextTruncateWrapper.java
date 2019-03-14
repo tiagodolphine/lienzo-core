@@ -27,7 +27,9 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 @SuppressWarnings("Duplicates")
 public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithBoundaries
 {
-    private static final double     Y_OFFSET           = 0.8;
+    private static final double Y_OFFSET         = 0.8;
+    public static final  String WHITESPACE_REGEX = " +|\\t+";
+    public static final String LINEBREAK = "\n";
 
     private BoundingBox             m_wrapBoundaries;
 
@@ -63,9 +65,14 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
         return m_wrapBoundaries.getWidth() - m_margin;
     }
 
+    private String[] splitWords(final String text)
+    {
+        return text.replaceAll(LINEBREAK, " " + LINEBREAK + " ").split(WHITESPACE_REGEX);
+    }
+
     private double[] calculateWrapBoundaries()
     {
-        final String[] words = textSupplier.get().split("\\s");
+        final String[] words = splitWords(textSupplier.get());
         if (words.length < 1)
         {
             return new double[]{m_wrapBoundaries.getX(), m_wrapBoundaries.getY()};
@@ -78,17 +85,26 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
         int numOfLines = 1;
         for (int i = 1; i < words.length; i++)
         {
-            width = getBoundingBoxForString(nextLine + " " + words[i]).getWidth();
+            final String currentWord = words[i];
+            if (currentWord.equals(LINEBREAK))
+            {
+                final String nextWord = words[i + 1];
+                if (LINEBREAK.equals(nextWord))
+                {
+                    numOfLines++;
+                }
+                continue;
+            }
+
+            width = getBoundingBoxForString(nextLine + " " + currentWord).getWidth();
             if (width <= wrapWidth)
             {
-                nextLine.append(" ").append(words[i]);
+                nextLine.append(" ").append(currentWord);
             }
             else
             {
-                nextLine.setLength(words[i].length());
-                nextLine.replace(0,
-                                 words[i].length(),
-                                 words[i]);
+                nextLine.setLength(currentWord.length());
+                nextLine.replace(0, currentWord.length(), currentWord);
                 numOfLines++;
             }
         }
@@ -123,7 +139,7 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
                            final Attributes attr,
                            final IDrawString drawCommand)
     {
-        final String[] words = attr.getText().split("\\s");
+        final String[] words = splitWords(attr.getText());
 
         if (words.length < 1)
         {
@@ -138,19 +154,32 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
         for (int i = 0; i < words.length; i++)
         {
             currentWord = words[i];
+            final String nextWord = (words.length - 1 > i) ? words[i + 1] : null;
+            if (currentWord.contains(LINEBREAK))
+            {
+                if (LINEBREAK.equals(nextWord))
+                {
+                    //adding empty line
+                    lines.add("");
+                }
+                continue;
+            }
 
             if (hasHorizontalSpaceToDraw(currentLine.toString(), currentWord, boundariesWidth))
             {
-                if (i + 1 < words.length
+                if (!LINEBREAK.equals(nextWord) && i + 1 < words.length
                         && getBoundingBoxForString(currentLine + currentWord + " " + words[i + 1]).getWidth() <= boundariesWidth)
                 {
-                    currentLine.append(currentWord).append(" ").append(words[i + 1]);
+                    currentLine.append(currentWord).append(" ").append(nextWord);
                     i++;
 
                     int j = i + 1;
                     while (j < words.length
                             && getBoundingBoxForString(currentLine + " " + words[j]).getWidth() <= boundariesWidth)
                     {
+                        if (words[j].contains(LINEBREAK)) {
+                            break;
+                        }
 
                         currentLine.append(" ").append(words[j]);
                         i++;
