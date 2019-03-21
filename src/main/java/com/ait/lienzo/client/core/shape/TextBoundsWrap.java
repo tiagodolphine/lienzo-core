@@ -1,17 +1,17 @@
 /*
-   Copyright (c) 2017 Ahome' Innovation Technologies. All rights reserved.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+ * Copyright 2019 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.ait.lienzo.client.core.shape;
@@ -77,20 +77,20 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
     @Override
     public BoundingBox getBoundingBox() {
         final double[] boundaries = calculateWrapBoundaries();
-        return new BoundingBox().addX(0).addX(wrapBoundaries.getWidth()).addY(0).addY(boundaries[1]);
+        return new BoundingBox(0, 0, boundaries[0], boundaries[1]);
     }
 
     private double[] calculateWrapBoundaries() {
         final String[] words = textSupplier.get().split("\\s");
         if (words.length < 1) {
-            return new double[] { wrapBoundaries.getX(), wrapBoundaries.getY() };
+            return new double[] { getWrapBoundaries().getX(), getWrapBoundaries().getY() };
         }
 
-        final double wrapWidth = wrapBoundaries.getWidth();
-        final String firstWord = words[0];
-        double width = getBoundingBoxForString(firstWord).getWidth();
-        final StringBuilder nextLine = new StringBuilder(firstWord);
-        int numOfLines = 1;
+        final double        wrapWidth  = getWrapBoundaries().getWidth();
+        final String        firstWord  = words[0];
+        double              width      = getBoundingBoxForString(firstWord).getWidth();
+        final StringBuilder nextLine   = new StringBuilder(firstWord);
+        int                 numOfLines = 1;
         for (int i = 1; i < words.length; i++) {
             width = getBoundingBoxForString(nextLine + " " + words[i]).getWidth();
             if (width <= wrapWidth) {
@@ -120,7 +120,8 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
         final StringBuilder nextLine = new StringBuilder(words[0]);
         final ArrayList<String> lines = new ArrayList<>();
         for (int i = 1; i < words.length; i++) {
-            if (getBoundingBoxForString(nextLine + " " + words[i]).getWidth() <= wrapBoundaries.getWidth()) {
+            if (getBoundingBoxForString(nextLine + " " + words[i]).getWidth() <= getWrapBoundaries().getWidth())
+            {
                 nextLine.append(" ").append(words[i]);
             } else {
                 lines.add(nextLine.toString());
@@ -141,19 +142,20 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
                 break;
 
             case CENTER:
-                xOffset = wrapBoundaries.getWidth() / 2;
+                xOffset = getWrapBoundaries().getWidth() / 2;
                 break;
 
             case END:
             case RIGHT:
-                xOffset = wrapBoundaries.getWidth();
+                xOffset = getWrapBoundaries().getWidth();
                 break;
         }
         double yOffset = 0.8;
 
         for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            int toPad = (int) Math.round((wrapBoundaries.getWidth() - getBoundingBoxForString(line).getWidth()) / getBoundingBoxForString(" ").getWidth());
+            String line  = lines.get(i);
+            int    toPad = (int) Math.round((getWrapBoundaries().getWidth() - getBoundingBoxForString(line).getWidth())
+                    / getBoundingBoxForString(" ").getWidth());
             line = TextUtils.padString(line,
                                        line.length() + toPad,
                                        ' ',

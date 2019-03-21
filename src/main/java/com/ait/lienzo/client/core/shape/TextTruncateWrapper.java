@@ -1,17 +1,17 @@
 /*
-   Copyright (c) 2019 Ahome' Innovation Technologies. All rights reserved.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+ * Copyright 2019 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.ait.lienzo.client.core.shape;
@@ -31,7 +31,7 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
 
     private BoundingBox             m_wrapBoundaries;
 
-    private static final double     m_margin           = 20;
+    private static final double m_margin = 0;
 
     public TextTruncateWrapper(final Text text,
                                final BoundingBox wrapBoundaries)
@@ -55,12 +55,12 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
     public BoundingBox getBoundingBox()
     {
         final double[] boundaries = calculateWrapBoundaries();
-        return new BoundingBox().addX(0).addX(m_wrapBoundaries.getWidth()).addY(0).addY(boundaries[1]);
+        return new BoundingBox(0, 0, boundaries[0], boundaries[1]);
     }
 
     private double getWrapBoundariesWidth()
     {
-        return m_wrapBoundaries.getWidth() - m_margin;
+        return getWrapBoundaries().getWidth() - m_margin;
     }
 
     private double[] calculateWrapBoundaries()
@@ -68,20 +68,27 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
         final String[] words = textSupplier.get().split("\\s");
         if (words.length < 1)
         {
-            return new double[]{m_wrapBoundaries.getX(), m_wrapBoundaries.getY()};
+            return new double[] { getWrapBoundaries().getX(), getWrapBoundaries().getY() };
         }
 
-        final double wrapWidth = getWrapBoundariesWidth();
-        final String firstWord = words[0];
-        double width = getBoundingBoxForString(firstWord).getWidth();
-        final StringBuilder nextLine = new StringBuilder(firstWord);
-        int numOfLines = 1;
+        final double        wrapWidth  = getWrapBoundariesWidth();
+        double              maxWidth   = 0;
+        final String        firstWord  = words[0];
+        double              width      = getBoundingBoxForString(firstWord).getWidth();
+        final StringBuilder nextLine   = new StringBuilder(firstWord);
+        int                 numOfLines = 1;
         for (int i = 1; i < words.length; i++)
         {
             width = getBoundingBoxForString(nextLine + " " + words[i]).getWidth();
+
             if (width <= wrapWidth)
             {
                 nextLine.append(" ").append(words[i]);
+
+                if (width > maxWidth)
+                {
+                    maxWidth = width;
+                }
             }
             else
             {
@@ -95,7 +102,7 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
 
         final double lineHeight = getLineHeight();
 
-        while (!hasVerticalSpace(numOfLines, lineHeight, m_wrapBoundaries.getHeight() - (Y_OFFSET * numOfLines))
+        while (!hasVerticalSpace(numOfLines, lineHeight, getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines))
                 && numOfLines >= 0)
         {
             numOfLines--;
@@ -103,7 +110,7 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
 
         final double height = lineHeight * numOfLines;
 
-        return new double[]{width, height};
+        return new double[] { maxWidth, height };
     }
 
     private boolean hasVerticalSpace(final int lineIndex,
@@ -162,8 +169,8 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
                     currentLine.append(currentWord);
                 }
 
-                if (i != words.length - 1
-                        && !hasVerticalSpace(lines.size() + 2, lineHeight, m_wrapBoundaries.getHeight() - (Y_OFFSET * lines.size() + 2)))
+                if (i != words.length - 1 && !hasVerticalSpace(lines.size() + 2, lineHeight,
+                        getWrapBoundaries().getHeight() - (Y_OFFSET * lines.size() + 2)))
                 {
                     if (currentLine.length() > 3)
                     {
@@ -195,7 +202,8 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
 
                 currentLine.append(newWord);
 
-                if (!hasVerticalSpace(lines.size() + 2, lineHeight, m_wrapBoundaries.getHeight() - (Y_OFFSET * lines.size() + 2)))
+                if (!hasVerticalSpace(lines.size() + 2, lineHeight,
+                        getWrapBoundaries().getHeight() - (Y_OFFSET * lines.size() + 2)))
                 {
                     if (currentLine.length() > 3) {
                         currentLine = new StringBuilder(currentLine.substring(0, currentLine.length() - 3) + "...");
@@ -240,12 +248,12 @@ public class TextTruncateWrapper extends TextNoWrap implements ITextWrapperWithB
                 break;
 
             case CENTER:
-                xOffset = m_wrapBoundaries.getWidth() / 2;
+                xOffset = getBoundingBox().getWidth() / 2;
                 break;
 
             case END:
             case RIGHT:
-                xOffset = m_wrapBoundaries.getWidth();
+                xOffset = getBoundingBox().getWidth();
                 break;
         }
 
