@@ -17,6 +17,7 @@
 package com.ait.lienzo.client.core.shape;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.types.BoundingBox;
@@ -29,7 +30,8 @@ import com.ait.lienzo.shared.core.types.TextUnit;
  */
 public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBoundaries  {
 
-    private BoundingBox wrapBoundaries;
+    protected static final double      Y_OFFSET = 0.8;
+    private                BoundingBox wrapBoundaries;
 
     public TextBoundsWrap(final Text text) {
         this(text,
@@ -109,8 +111,7 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
 
     @Override
     public void drawString(final Context2D context,
-                           final Attributes attr,
-                           final IDrawString drawCommand) {
+                           final Attributes attr, final IDrawString drawCommand) {
         final String[] words = attr.getText().split("\\s");
 
         if (words.length < 1) {
@@ -125,43 +126,47 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
             } else {
                 lines.add(nextLine.toString());
                 nextLine.setLength(words[i].length());
-                nextLine.replace(0,
-                                 words[i].length(),
-                                 words[i]);
+                nextLine.replace(0, words[i].length(), words[i]);
             }
         }
         lines.add(nextLine.toString());
 
+        drawLines(context, drawCommand, lines, wrapBoundaries.getWidth());
+    }
+
+    protected void drawLines(Context2D context, IDrawString drawCommand, List<String> lines, double boundariesWidth)
+    {
         double xOffset = 0;
 
-        switch (textAlignSupplier.get()) {
-            case START:
-            case LEFT:
-                xOffset = 0;
-                break;
+        switch (textAlignSupplier.get())
+        {
+        case START:
+        case LEFT:
+            xOffset = 0;
+            break;
 
-            case CENTER:
-                xOffset = wrapBoundaries.getWidth() / 2;
-                break;
+        case CENTER:
+            xOffset = getWrapBoundaries().getWidth() / 2;
+            break;
 
-            case END:
-            case RIGHT:
-                xOffset = wrapBoundaries.getWidth();
-                break;
+        case END:
+        case RIGHT:
+            xOffset = getWrapBoundaries().getWidth();
+            break;
         }
-        double yOffset = 0.8;
 
-        for (int i = 0; i < lines.size(); i++) {
+        for (int i = 0; i < lines.size(); i++)
+        {
             String line = lines.get(i);
-            int toPad = (int) Math.round((wrapBoundaries.getWidth() - getBoundingBoxForString(line).getWidth()) / getBoundingBoxForString(" ").getWidth());
-            line = TextUtils.padString(line,
-                                       line.length() + toPad,
-                                       ' ',
-                                       textAlignSupplier.get());
-            drawCommand.draw(context,
-                             line,
-                             xOffset,
-                             i + yOffset);
+            if (line.length() == 0)
+            {
+                continue;
+            }
+            final int toPad = (int) Math
+                    .round((boundariesWidth - getBoundingBoxForString(line).getWidth()) / getBoundingBoxForString(" ")
+                            .getWidth());
+            line = TextUtils.padString(line, line.length() + toPad, ' ', textAlignSupplier.get());
+            drawCommand.draw(context, line, xOffset, i + Y_OFFSET);
         }
     }
 }
