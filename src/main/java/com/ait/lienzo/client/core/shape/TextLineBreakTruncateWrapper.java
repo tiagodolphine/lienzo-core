@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.ait.lienzo.client.core.Context2D;
-import com.ait.lienzo.client.core.types.BoundingBox;tru
+import com.ait.lienzo.client.core.types.BoundingBox;
 
 /**
  * ITextWrapper implementation that truncates text and appends "..." if there is no space left.
@@ -59,7 +59,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;tru
 
     private double getRemainingHeight(int numOfLines)
     {
-        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines) - MARGIN;
+        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines);
     }
 
     @Override public void drawString(final Context2D context, final Attributes attr, final IDrawString drawCommand)
@@ -78,17 +78,18 @@ import com.ait.lienzo.client.core.types.BoundingBox;tru
         for (int i = 0; i < words.length; i++)
         {
 
-            if (!hasVerticalSpace(lines.size(), getLineHeight(), getRemainingHeight(lines.size())))
+            if (!hasVerticalSpace(lines.size(), getLineHeight(), getRemainingHeight(lines.size())) && !lines.isEmpty())
             {
                 String endWord = lines.get(lines.size() - 1);
                 String truncated =
-                        (endWord.length() > 4 ? endWord.substring(0, endWord.length() - 4) : endWord) + "...";
+                        (endWord.length() > 3 ? endWord.substring(0, endWord.length() - 4) : endWord) + "...";
                 lines.remove(lines.size() - 1);
                 lines.add(truncated);
                 break;
             }
 
-            final String currentWord = words[i] + ((i + 1 < words.length) ? " " : "");
+            //set current world + whitespace if applicable
+            final String currentWord = words[i];
             if (currentWord.contains(LINEBREAK))
             {
                 flushLine(lines, currentLine);
@@ -120,7 +121,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;tru
                 continue;
             }
 
-            currentLine.append(currentWord);
+            currentLine.append(currentWord + ((i + 1 < words.length && !" ".equals(words[i])) ? " " : ""));
 
             //handle last line
             if (i == words.length - 1)
