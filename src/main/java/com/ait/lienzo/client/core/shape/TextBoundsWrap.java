@@ -1,22 +1,23 @@
 /*
- * Copyright 2019 Red Hat, Inc. and/or its affiliates.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+   Copyright (c) 2017 Ahome' Innovation Technologies. All rights reserved.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 
 package com.ait.lienzo.client.core.shape;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.types.BoundingBox;
@@ -29,7 +30,8 @@ import com.ait.lienzo.shared.core.types.TextUnit;
  */
 public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBoundaries  {
 
-    private BoundingBox wrapBoundaries;
+    protected static final double      Y_OFFSET = 0.8;
+    private                BoundingBox wrapBoundaries;
 
     public TextBoundsWrap(final Text text) {
         this(text,
@@ -109,8 +111,7 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
 
     @Override
     public void drawString(final Context2D context,
-                           final Attributes attr,
-                           final IDrawString drawCommand) {
+                           final Attributes attr, final IDrawString drawCommand) {
         final String[] words = attr.getText().split("\\s");
 
         if (words.length < 1) {
@@ -126,44 +127,47 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
             } else {
                 lines.add(nextLine.toString());
                 nextLine.setLength(words[i].length());
-                nextLine.replace(0,
-                                 words[i].length(),
-                                 words[i]);
+                nextLine.replace(0, words[i].length(), words[i]);
             }
         }
         lines.add(nextLine.toString());
 
+        drawLines(context, drawCommand, lines, wrapBoundaries.getWidth());
+    }
+
+    protected void drawLines(Context2D context, IDrawString drawCommand, List<String> lines, double boundariesWidth)
+    {
         double xOffset = 0;
 
-        switch (textAlignSupplier.get()) {
-            case START:
-            case LEFT:
-                xOffset = 0;
-                break;
+        switch (textAlignSupplier.get())
+        {
+        case START:
+        case LEFT:
+            xOffset = 0;
+            break;
 
-            case CENTER:
-                xOffset = getWrapBoundaries().getWidth() / 2;
-                break;
+        case CENTER:
+            xOffset = getWrapBoundaries().getWidth() / 2;
+            break;
 
-            case END:
-            case RIGHT:
-                xOffset = getWrapBoundaries().getWidth();
-                break;
+        case END:
+        case RIGHT:
+            xOffset = getWrapBoundaries().getWidth();
+            break;
         }
-        double yOffset = 0.8;
 
-        for (int i = 0; i < lines.size(); i++) {
-            String line  = lines.get(i);
-            int    toPad = (int) Math.round((getWrapBoundaries().getWidth() - getBoundingBoxForString(line).getWidth())
-                    / getBoundingBoxForString(" ").getWidth());
-            line = TextUtils.padString(line,
-                                       line.length() + toPad,
-                                       ' ',
-                                       textAlignSupplier.get());
-            drawCommand.draw(context,
-                             line,
-                             xOffset,
-                             i + yOffset);
+        for (int i = 0; i < lines.size(); i++)
+        {
+            String line = lines.get(i);
+            if (line.length() == 0)
+            {
+                continue;
+            }
+            final int toPad = (int) Math
+                    .round((boundariesWidth - getBoundingBoxForString(line).getWidth()) / getBoundingBoxForString(" ")
+                            .getWidth());
+            line = TextUtils.padString(line, line.length() + toPad, ' ', textAlignSupplier.get());
+            drawCommand.draw(context, line, xOffset, i + Y_OFFSET);
         }
     }
 }
