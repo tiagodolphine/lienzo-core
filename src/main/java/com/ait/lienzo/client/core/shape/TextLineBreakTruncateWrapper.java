@@ -59,7 +59,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 
     private double getRemainingHeight(int numOfLines)
     {
-        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines);
+        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines) - Y_OFFSET * 2;
     }
 
     @Override public void drawString(final Context2D context, final Attributes attr, final IDrawString drawCommand)
