@@ -59,7 +59,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 
     private double getRemainingHeight(int numOfLines)
     {
-        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines) - Y_OFFSET * 2;
+        return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines);
     }
 
     @Override public void drawString(final Context2D context, final Attributes attr, final IDrawString drawCommand)
@@ -78,7 +78,8 @@ import com.ait.lienzo.client.core.types.BoundingBox;
         for (int i = 0; i < words.length; i++)
         {
 
-            if (!hasVerticalSpace(lines.size(), getLineHeight(), getRemainingHeight(lines.size())) && !lines.isEmpty())
+            int lineIndex = lines.size() + 1;
+            if (!hasVerticalSpace(lineIndex, getLineHeight(), getRemainingHeight(lineIndex)) && !lines.isEmpty())
             {
                 String endWord = lines.get(lines.size() - 1);
                 String truncated =
