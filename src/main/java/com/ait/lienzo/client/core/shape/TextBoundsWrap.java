@@ -151,12 +151,12 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
             break;
 
         case CENTER:
-            xOffset = getWrapBoundaries().getWidth() / 2;
+            xOffset = boundariesWidth / 2;
             break;
 
         case END:
         case RIGHT:
-            xOffset = getWrapBoundaries().getWidth();
+            xOffset = boundariesWidth;
             break;
         }
 

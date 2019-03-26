@@ -35,6 +35,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
     public TextLineBreakTruncateWrapper(final Text text, final BoundingBox wrapBoundaries)
     {
         super(text, wrapBoundaries);
+        m_margin = 10;
     }
 
     private String[] splitWords(final String text)

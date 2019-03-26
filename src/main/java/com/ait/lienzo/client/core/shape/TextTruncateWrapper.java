@@ -29,7 +29,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 {
     private BoundingBox             m_wrapBoundaries;
 
-    protected static final double MARGIN = 20;
+    protected double m_margin = 20;
 
     public TextTruncateWrapper(final Text text,
                                final BoundingBox wrapBoundaries)
@@ -58,7 +58,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 
     protected double getWrapBoundariesWidth()
     {
-        return m_wrapBoundaries.getWidth() - MARGIN;
+        return m_wrapBoundaries.getWidth() - m_margin;
     }
 
     protected double[] calculateWrapBoundaries()
@@ -242,5 +242,13 @@ import com.ait.lienzo.client.core.types.BoundingBox;
         final BoundingBox currentLineSize = getBoundingBoxForString(currentLine);
         final double width = currentLineSize.getWidth() + currentWordSize.getWidth();
         return width <= boundariesWidth;
+    }
+
+    public double getMargin() {
+        return m_margin;
+    }
+
+    public void setMargin(double m_margin) {
+        this.m_margin = m_margin;
     }
 }
