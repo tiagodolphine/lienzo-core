@@ -93,10 +93,14 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
         double              width      = getBoundingBoxForString(firstWord).getWidth();
         final StringBuilder nextLine   = new StringBuilder(firstWord);
         int                 numOfLines = 1;
+        double              maxWidth = 0;
         for (int i = 1; i < words.length; i++) {
             width = getBoundingBoxForString(nextLine + " " + words[i]).getWidth();
             if (width <= wrapWidth) {
                 nextLine.append(" ").append(words[i]);
+                if(maxWidth < width){
+                    maxWidth = width;
+                }
             } else {
                 nextLine.setLength(words[i].length());
                 nextLine.replace(0,
@@ -106,7 +110,7 @@ public class TextBoundsWrap extends TextNoWrap implements ITextWrapperWithBounda
             }
         }
         final double height = getBoundingBoxForString(textSupplier.get()).getHeight() * numOfLines;
-        return new double[] {width, height};
+        return new double[] {maxWidth, height};
     }
 
     @Override
