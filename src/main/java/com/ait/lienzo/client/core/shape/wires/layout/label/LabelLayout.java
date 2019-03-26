@@ -20,14 +20,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout;
-import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.Builder;
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.Direction;
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.HorizontalAlignment;
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.Orientation;
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.ReferencePosition;
 import com.ait.lienzo.client.core.shape.wires.layout.direction.DirectionLayout.VerticalAlignment;
 import com.ait.lienzo.client.core.shape.wires.layout.size.SizeConstraints;
-import com.ait.lienzo.client.core.shape.wires.layout.size.SizeConstraints.Type;
 
 public class LabelLayout
 {
@@ -106,9 +104,14 @@ public class LabelLayout
             final DirectionLayout directionLayout = new DirectionLayout.Builder()
                     .horizontalAlignment(m_horizontalAlignment).verticalAlignment(m_verticalAlignment)
                     .orientation(m_orientation).referencePosition(m_referencePosition).margins(m_margins).build();
-            final Double marginX = m_margins.get(HorizontalAlignment.LEFT);
-            final Double marginY = m_margins.get(VerticalAlignment.TOP);
-            final SizeConstraints sizeConstraints = new SizeConstraints(m_sizeConstraints.getWidth(),
+            final Double marginX = m_margins.get(HorizontalAlignment.LEFT) != null ?
+                    m_margins.get(HorizontalAlignment.LEFT) : m_margins.get(HorizontalAlignment.RIGHT);
+            final Double marginY = m_margins.get(VerticalAlignment.TOP) != null ?
+                    m_margins.get(VerticalAlignment.TOP) : m_margins.get(VerticalAlignment.BOTTOM);
+
+            final SizeConstraints sizeConstraints =
+                    (m_sizeConstraints == null) ? new SizeConstraints()
+                            : new SizeConstraints(m_sizeConstraints.getWidth(),
                     m_sizeConstraints.getHeight(), m_sizeConstraints.getType(), marginX != null ? marginX : 0,
                     marginY != null ? marginY : 0);
             return new LabelLayout(directionLayout, sizeConstraints);

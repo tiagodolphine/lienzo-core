@@ -49,6 +49,10 @@ public class SizeConstraints
         this.m_type = type;
     }
 
+    public SizeConstraints(){
+        this(100, 100, Type.PERCENTAGE);
+    }
+
     public double getWidth()
     {
         return width;
