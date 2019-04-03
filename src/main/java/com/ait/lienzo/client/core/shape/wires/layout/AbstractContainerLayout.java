@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ait.lienzo.client.core.shape.wires.layout;
 
 import java.util.HashMap;
@@ -26,13 +25,17 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 public abstract class AbstractContainerLayout<L> implements IContainerLayout<L>
 {
     private final Map<IPrimitive, L> children;
-    private final IPrimitive         parentBoundingBox;
 
-    public AbstractContainerLayout(final IPrimitive parentBoundingBox)
+    private final IPrimitive         parent;
+
+    public AbstractContainerLayout(final IPrimitive parent)
     {
-        this.parentBoundingBox = parentBoundingBox;
+        if (parent == null)
+        {
+            throw new IllegalArgumentException("Parent cannot be null");
+        }
+        this.parent = parent;
         this.children = new HashMap<>();
-
     }
 
     private Map<IPrimitive, L> getChildren()
@@ -49,7 +52,7 @@ public abstract class AbstractContainerLayout<L> implements IContainerLayout<L>
     @Override
     public IContainerLayout add(final IPrimitive<?> child, final L layout)
     {
-        getChildren().put(child, layout);
+        getChildren().put(child, getLayout(layout));
         return this;
     }
 
@@ -84,8 +87,13 @@ public abstract class AbstractContainerLayout<L> implements IContainerLayout<L>
 
     public abstract L getDefaultLayout();
 
+    protected L getLayout(final L layout)
+    {
+        return layout == null ? getDefaultLayout() : layout;
+    }
+
     public BoundingBox getParentBoundingBox()
     {
-        return parentBoundingBox.getBoundingBox();
+        return parent.getBoundingBox();
     }
 }

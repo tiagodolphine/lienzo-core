@@ -24,5 +24,5 @@ import com.ait.tooling.common.api.java.util.function.Function;
 public interface DirectionLayoutBuilder<A>
 {
     Double apply(BoundingBox parentBoundingBox, BoundingBox childBoundingBox, A alignment, Orientation orientation,
-            Function<Direction, Double> margins);
+                 Function<Direction, Double> margins);
 }

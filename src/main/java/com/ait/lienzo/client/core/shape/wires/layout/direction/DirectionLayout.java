@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ait.lienzo.client.core.shape.wires.layout.direction;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import com.ait.lienzo.client.core.shape.wires.layout.label.LabelLayout;
-import com.ait.lienzo.client.core.shape.wires.layout.label.LabelLayout.Builder;
+import java.util.Objects;
 
 public class DirectionLayout
 {
     public interface Direction
     {
-
     }
 
     public enum HorizontalAlignment implements Direction
@@ -49,23 +45,25 @@ public class DirectionLayout
         HORIZONTAL, VERTICAL
     }
 
-    private HorizontalAlignment m_horizontalAlignment;
+    private HorizontalAlignment    m_horizontalAlignment;
 
     private VerticalAlignment      m_verticalAlignment;
+
     private ReferencePosition      m_referencePosition;
+
     private Orientation            m_orientation;
+
     private Map<Direction, Double> m_margins;
 
     public DirectionLayout(final HorizontalAlignment horizontalAlignment, final VerticalAlignment verticalAlignment,
-            final Orientation orientation, final ReferencePosition referencePosition,
-            final Map<Direction, Double> margins)
+                           final Orientation orientation, final ReferencePosition referencePosition,
+                           final Map<Direction, Double> margins)
     {
         m_horizontalAlignment = horizontalAlignment;
         m_verticalAlignment = verticalAlignment;
         m_referencePosition = referencePosition;
         m_orientation = orientation;
         m_margins = margins;
-
     }
 
     public Map<Direction, Double> getMargins()
@@ -99,13 +97,42 @@ public class DirectionLayout
         return m_orientation;
     }
 
+    @Override
+    public boolean equals(final Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (!(o instanceof DirectionLayout))
+        {
+            return false;
+        }
+        final DirectionLayout that = (DirectionLayout) o;
+        return getHorizontalAlignment() == that.getHorizontalAlignment() &&
+               getVerticalAlignment() == that.getVerticalAlignment() &&
+               getReferencePosition() == that.getReferencePosition() &&
+               getOrientation() == that.getOrientation() &&
+               Objects.equals(getMargins(), that.getMargins());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(getHorizontalAlignment(), getVerticalAlignment(), getReferencePosition(), getOrientation(), getMargins());
+    }
+
     public static class Builder
     {
-        private HorizontalAlignment    m_horizontalAlignment;
-        private VerticalAlignment      m_verticalAlignment;
-        private ReferencePosition      m_referencePosition;
-        private Orientation            m_orientation = Orientation.HORIZONTAL;
-        private Map<Direction, Double> m_margins     = new HashMap<>();
+        private HorizontalAlignment    m_horizontalAlignment = HorizontalAlignment.CENTER;
+
+        private VerticalAlignment      m_verticalAlignment   = VerticalAlignment.MIDDLE;
+
+        private ReferencePosition      m_referencePosition   = ReferencePosition.INSIDE;
+
+        private Orientation            m_orientation         = Orientation.HORIZONTAL;
+
+        private Map<Direction, Double> m_margins             = new HashMap<>();
 
         public Builder horizontalAlignment(final HorizontalAlignment horizontalAlignment)
         {
@@ -146,7 +173,7 @@ public class DirectionLayout
         public DirectionLayout build()
         {
             return new DirectionLayout(m_horizontalAlignment, m_verticalAlignment, m_orientation, m_referencePosition,
-                    m_margins);
+                                       m_margins);
         }
     }
 }

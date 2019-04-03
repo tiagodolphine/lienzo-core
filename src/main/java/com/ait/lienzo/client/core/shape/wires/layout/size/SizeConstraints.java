@@ -16,6 +16,8 @@
 
 package com.ait.lienzo.client.core.shape.wires.layout.size;
 
+import java.util.Objects;
+
 public class SizeConstraints
 {
     public enum Type
@@ -76,5 +78,28 @@ public class SizeConstraints
     public double getMarginY()
     {
         return marginY;
+    }
+
+    @Override public boolean equals(final Object o)
+    {
+        if (this == o)
+        {
+            return true;
+        }
+        if (!(o instanceof SizeConstraints))
+        {
+            return false;
+        }
+        final SizeConstraints that = (SizeConstraints) o;
+        return Double.compare(that.getWidth(), getWidth()) == 0 &&
+               Double.compare(that.getHeight(), getHeight()) == 0 &&
+               Double.compare(that.getMarginX(), getMarginX()) == 0 &&
+               Double.compare(that.getMarginY(), getMarginY()) == 0 &&
+               getType() == that.getType();
+    }
+
+    @Override public int hashCode()
+    {
+        return Objects.hash(getWidth(), getHeight(), getMarginX(), getMarginY(), getType());
     }
 }

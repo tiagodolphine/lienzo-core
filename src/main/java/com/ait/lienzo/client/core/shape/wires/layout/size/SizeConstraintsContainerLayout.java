@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ait.lienzo.client.core.shape.wires.layout.size;
 
 import java.util.HashMap;
@@ -28,28 +27,34 @@ import com.ait.tooling.common.api.java.util.function.BiFunction;
 public class SizeConstraintsContainerLayout extends AbstractContainerLayout<SizeConstraints>
         implements IMaxSizeLayout<SizeConstraints>
 {
-    private static final Map<Type, BiFunction<SizeConstraints, BoundingBox, BoundingBox>> sizeBuilders = new HashMap<Type, BiFunction<SizeConstraints, BoundingBox, BoundingBox>>()
-    {{
-        put(Type.RAW, new BiFunction<SizeConstraints, BoundingBox, BoundingBox>()
-        {
+    private static final Map<Type, BiFunction<SizeConstraints, BoundingBox, BoundingBox>> SIZE_BUILDERS = sizeBuilders();
 
+    private static Map<Type, BiFunction<SizeConstraints, BoundingBox, BoundingBox>> sizeBuilders()
+    {
+        final Map<Type, BiFunction<SizeConstraints, BoundingBox, BoundingBox>> sizeBuilders = new HashMap<>();
+        sizeBuilders.put(Type.RAW, new BiFunction<SizeConstraints, BoundingBox, BoundingBox>()
+        {
             @Override
             public BoundingBox apply(final SizeConstraints sizeConstraints, final BoundingBox parentBoundingBox)
             {
-                return new BoundingBox(0, 0, sizeConstraints.getWidth() -sizeConstraints.getMarginX(), sizeConstraints.getHeight() - sizeConstraints.getMarginY());
+                return new BoundingBox(0, 0, sizeConstraints.getWidth() - sizeConstraints.getMarginX(),
+                                       sizeConstraints.getHeight() - sizeConstraints.getMarginY());
             }
         });
-        put(Type.PERCENTAGE, new BiFunction<SizeConstraints, BoundingBox, BoundingBox>()
+        sizeBuilders.put(Type.PERCENTAGE, new BiFunction<SizeConstraints, BoundingBox, BoundingBox>()
         {
             @Override
             public BoundingBox apply(final SizeConstraints sizeConstraints, final BoundingBox parentBoundingBox)
             {
-                double width  = sizeConstraints.getWidth() * (parentBoundingBox.getWidth() / 100) - sizeConstraints.getMarginX();
-                double height = sizeConstraints.getHeight() * (parentBoundingBox.getHeight() / 100) - sizeConstraints.getMarginY();
+                double width = sizeConstraints.getWidth() * (parentBoundingBox.getWidth() / 100) - sizeConstraints
+                        .getMarginX();
+                double height = sizeConstraints.getHeight() * (parentBoundingBox.getHeight() / 100) - sizeConstraints
+                        .getMarginY();
                 return new BoundingBox(0, 0, width, height);
             }
         });
-    }};
+        return sizeBuilders;
+    }
 
     public SizeConstraintsContainerLayout(final IPrimitive parentBoundingBox)
     {
@@ -59,13 +64,17 @@ public class SizeConstraintsContainerLayout extends AbstractContainerLayout<Size
     @Override
     public BoundingBox getMaxSize(final IPrimitive<?> child)
     {
-        SizeConstraints layout = getLayout(child);
-        return sizeBuilders.get(layout.getType()).apply(layout, getParentBoundingBox());
+        final SizeConstraints layout = getLayout(child);
+        if (layout == null)
+        {
+            return new BoundingBox();
+        }
+        return SIZE_BUILDERS.get(layout.getType()).apply(layout, getParentBoundingBox());
     }
 
     @Override
     public SizeConstraints getDefaultLayout()
     {
-        return new SizeConstraints(getParentBoundingBox().getWidth(), getParentBoundingBox().getHeight(), Type.RAW);
+        return new SizeConstraints(100, 100, Type.PERCENTAGE);
     }
 }

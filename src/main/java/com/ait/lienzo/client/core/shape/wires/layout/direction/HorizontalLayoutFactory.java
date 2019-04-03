@@ -29,11 +29,15 @@ import com.ait.tooling.common.api.java.util.function.Function;
 public class HorizontalLayoutFactory
 {
 
-    private static Map<ReferencePosition, DirectionLayoutBuilder<HorizontalAlignment>> builders = new HashMap<ReferencePosition, DirectionLayoutBuilder<HorizontalAlignment>>()
-    {{
-        put(ReferencePosition.OUTSIDE, new OuterHorizontalLayoutBuilder());
-        put(ReferencePosition.INSIDE, new InnerHorizontalLayoutBuilder());
-    }};
+    private static final Map<ReferencePosition, DirectionLayoutBuilder<HorizontalAlignment>> BUILDERS = builders();
+
+    private static Map<ReferencePosition, DirectionLayoutBuilder<HorizontalAlignment>> builders()
+    {
+        final Map<ReferencePosition, DirectionLayoutBuilder<HorizontalAlignment>> builders = new HashMap<>();
+        builders.put(ReferencePosition.OUTSIDE, new OuterHorizontalLayoutBuilder());
+        builders.put(ReferencePosition.INSIDE, new InnerHorizontalLayoutBuilder());
+        return builders;
+    }
 
     private HorizontalLayoutFactory()
     {
@@ -42,10 +46,10 @@ public class HorizontalLayoutFactory
 
     public static DirectionLayoutBuilder<HorizontalAlignment> get(ReferencePosition referencePosition)
     {
-        return builders.get(referencePosition);
+        return BUILDERS.get(referencePosition);
     }
 
-    private static class OuterHorizontalLayoutBuilder implements DirectionLayoutBuilder<HorizontalAlignment>
+    protected static final class OuterHorizontalLayoutBuilder implements DirectionLayoutBuilder<HorizontalAlignment>
     {
         @Override
         public Double apply(final BoundingBox parentBoundingBox, final BoundingBox childBoundingBox,
@@ -68,7 +72,7 @@ public class HorizontalLayoutFactory
         }
     }
 
-    private static class InnerHorizontalLayoutBuilder implements DirectionLayoutBuilder<HorizontalAlignment>
+    protected static final class InnerHorizontalLayoutBuilder implements DirectionLayoutBuilder<HorizontalAlignment>
     {
         @Override
         public Double apply(final BoundingBox parentBoundingBox, final BoundingBox childBoundingBox,
@@ -94,13 +98,9 @@ public class HorizontalLayoutFactory
     private static double getCenter(final BoundingBox parentBoundingBox, final BoundingBox childBoundingBox,
             final double margin)
     {
-
         final double parentCenter = parentBoundingBox.getMinX() + (parentBoundingBox.getWidth() / 2);
-        final double childCenter            = childBoundingBox.getWidth() / 2;
-        final double x = parentCenter - childCenter;
-
-        //exceeded right margin boundary
-        //boolean right = x + childBoundingBox.getWidth() > parentBoundingBox.getWidth() - margin;
+        final double childCenter  = childBoundingBox.getWidth() / 2;
+        final double x            = parentCenter - childCenter;
         return (x > margin || parentCenter < childCenter) ? x : margin;
     }
 }
