@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.ait.lienzo.client.core.shape;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import com.ait.lienzo.client.core.Context2D;
 import com.ait.lienzo.client.core.types.BoundingBox;
@@ -27,15 +27,21 @@ import com.ait.lienzo.client.core.types.BoundingBox;
  */
 @SuppressWarnings("Duplicates") public class TextLineBreakTruncateWrapper extends TextTruncateWrapper
 {
+    public static final String       WHITESPACE_REGEX   = " |\\t";
 
-    public static final String WHITESPACE_REGEX   = " |\\t";
-    public static final String LINEBREAK          = "\n";
-    public static final int    MAX_LENGHT_TO_WRAP = 10;
+    public static final String       LINEBREAK          = "\n";
+
+    public static final int          MAX_LENGHT_TO_WRAP = 10;
+
+    private             int          lastTextHash;
+
+    private final       List<String> textLines;
 
     public TextLineBreakTruncateWrapper(final Text text, final BoundingBox wrapBoundaries)
     {
         super(text, wrapBoundaries);
-        m_margin = 10;
+        setMargin(10);
+        textLines = new ArrayList<>();
     }
 
     private String[] splitWords(final String text)
@@ -43,10 +49,11 @@ import com.ait.lienzo.client.core.types.BoundingBox;
         return text.replaceAll(LINEBREAK, " " + LINEBREAK + " ").split(WHITESPACE_REGEX);
     }
 
-    @Override protected double[] calculateWrapBoundaries()
+    @Override
+    protected double[] calculateWrapBoundaries()
     {
-        final List<String> lines = getWrappedTextLines(textSupplier.get());
-        final double height = getHeightByLines(lines.size());
+        final List<String> lines  = getWrappedTextLines(textSupplier.get());
+        final double       height = getHeightByLines(lines.size());
 
         double maxWidth = 0;
         for (String line : lines)
@@ -55,7 +62,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
             maxWidth = (lineWidth > maxWidth) ? lineWidth : maxWidth;
         }
 
-        return new double[] { maxWidth, height };
+        return new double[]{maxWidth, height};
     }
 
     private double getRemainingHeight(int numOfLines)
@@ -63,18 +70,38 @@ import com.ait.lienzo.client.core.types.BoundingBox;
         return getWrapBoundaries().getHeight() - (Y_OFFSET * numOfLines);
     }
 
-    @Override public void drawString(final Context2D context, final Attributes attr, final IDrawString drawCommand)
+    @Override
+    public void drawString(final Context2D context, final Attributes attr, final IDrawString drawCommand)
     {
         final List<String> lines = getWrappedTextLines(attr.getText());
         drawLines(context, drawCommand, lines, getBoundingBox().getWidth());
     }
 
+    private boolean hasChanged(String text)
+    {
+        final int currentTextHash = Objects.hash(text, getWrapBoundaries());
+        boolean   hasChanged      = (currentTextHash != lastTextHash);
+        if (hasChanged)
+        {
+            lastTextHash = currentTextHash;
+        }
+        return hasChanged;
+    }
+
     private List<String> getWrappedTextLines(final String text)
     {
-        final String[] words = splitWords(text);
-        final List<String> lines = new ArrayList<>();
-        final double boundariesWidth = getWrapBoundariesWidth();
-        final StringBuilder currentLine = new StringBuilder();
+
+        //in case text and boundaries has not changed return preview lines, to avoid recalculate the text wrapping
+        if (!hasChanged(text))
+        {
+            return textLines;
+        }
+        textLines.clear();
+
+        final String[]      words           = splitWords(text);
+        final List<String>  lines           = new ArrayList<>();
+        final double        boundariesWidth = getWrapBoundariesWidth();
+        final StringBuilder currentLine     = new StringBuilder();
 
         for (int i = 0; i < words.length; i++)
         {
@@ -102,11 +129,11 @@ import com.ait.lienzo.client.core.types.BoundingBox;
             {
                 //find the currentWord max char index that fits the boundariesWidth
                 final int splitCharIndex = getSplitCharIndexToFitWidth(boundariesWidth, currentLine.toString(),
-                        currentWord);
+                                                                       currentWord);
 
                 //spliting the word to fit the boundaries width
                 String remainingWord = currentWord.substring(splitCharIndex);
-                String truncated = currentWord.substring(0, splitCharIndex);
+                String truncated     = currentWord.substring(0, splitCharIndex);
 
                 //handle splited word in case it is short, breaking to the next line
                 if (remainingWord.length() < MAX_LENGHT_TO_WRAP && currentLine.length() > 0)
@@ -132,6 +159,8 @@ import com.ait.lienzo.client.core.types.BoundingBox;
                 break;
             }
         }
+
+        this.textLines.addAll(lines);
         return lines;
     }
 

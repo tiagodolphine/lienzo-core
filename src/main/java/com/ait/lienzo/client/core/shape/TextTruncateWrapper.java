@@ -29,7 +29,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
 {
     private BoundingBox             m_wrapBoundaries;
 
-    protected double m_margin = 20;
+    private  double m_margin = 20;
 
     public TextTruncateWrapper(final Text text,
                                final BoundingBox wrapBoundaries)

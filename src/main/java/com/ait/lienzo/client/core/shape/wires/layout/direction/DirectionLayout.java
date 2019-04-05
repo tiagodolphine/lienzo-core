@@ -122,6 +122,18 @@ public class DirectionLayout
         return Objects.hash(getHorizontalAlignment(), getVerticalAlignment(), getReferencePosition(), getOrientation(), getMargins());
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("DirectionLayout{");
+        sb.append("m_horizontalAlignment=").append(m_horizontalAlignment);
+        sb.append(", m_verticalAlignment=").append(m_verticalAlignment);
+        sb.append(", m_referencePosition=").append(m_referencePosition);
+        sb.append(", m_orientation=").append(m_orientation);
+        sb.append(", m_margins=").append(m_margins);
+        sb.append('}');
+        return sb.toString();
+    }
+
     public static class Builder
     {
         private HorizontalAlignment    m_horizontalAlignment = HorizontalAlignment.CENTER;
