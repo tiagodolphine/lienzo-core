@@ -109,11 +109,15 @@ import com.ait.lienzo.client.core.types.BoundingBox;
             int lineIndex = lines.size() + 1;
             if (!hasVerticalSpace(lineIndex, getLineHeight(), getRemainingHeight(lineIndex)) && !lines.isEmpty())
             {
-                String endWord = lines.get(lines.size() - 1);
-                String truncated =
+                final int lastWordIndex = lines.size() - 1;
+                final String endWord = lines.get(lastWordIndex);
+                final String truncated =
                         (endWord.length() > 3 ? endWord.substring(0, endWord.length() - 4) : endWord) + "...";
-                lines.remove(lines.size() - 1);
-                lines.add(truncated);
+                lines.remove(lastWordIndex);
+                //add if it has space to draw the truncated word
+                if(hasHorizontalSpaceToDraw(truncated, "", boundariesWidth)) {
+                    lines.add(truncated);
+                }
                 break;
             }
 
