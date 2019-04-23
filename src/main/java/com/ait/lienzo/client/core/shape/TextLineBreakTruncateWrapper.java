@@ -171,7 +171,7 @@ import com.ait.lienzo.client.core.types.BoundingBox;
     private int getSplitCharIndexToFitWidth(double boundariesWidth, String currentLine, String currentWord)
     {
         int remainingCharIndex = 0;
-        while (hasHorizontalSpaceToDraw(currentLine, currentWord.substring(0, ++remainingCharIndex), boundariesWidth))
+        while (!currentWord.isEmpty() && hasHorizontalSpaceToDraw(currentLine, currentWord.substring(0, ++remainingCharIndex), boundariesWidth))
         {
         }
         return remainingCharIndex;
